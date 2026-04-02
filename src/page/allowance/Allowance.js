@@ -3,9 +3,20 @@ import AllowanceService from "../../service/AllowanceService";
 import EmployeeService from "../../service/EmployeeService";
 import "./allowance.css";
 
+/* ── Static Constants ── */
 const ALLOWANCE_TYPES = ["Transport", "Meal", "Housing", "Medical", "Other"];
 
-/* ── Memo-ised table row ── */
+const EMPTY_FORM = { employeeId: "", type: "", amount: "" };
+
+const TYPE_CONFIG = {
+  Transport: { bg: "#e8f4ff", color: "#2563eb", icon: "bi-bus-front-fill" },
+  Meal:      { bg: "#fef3c7", color: "#d97706", icon: "bi-cup-hot-fill"    },
+  Housing:   { bg: "#f0fdf4", color: "#16a34a", icon: "bi-house-fill"      },
+  Medical:   { bg: "#fdf2f8", color: "#db2777", icon: "bi-heart-pulse-fill"},
+  Other:     { bg: "#f3f4f6", color: "#6b7280", icon: "bi-three-dots"      },
+};
+
+/* ── Memoized table row ── */
 const AllowanceRow = memo(({ allowance, index, onEdit, onDelete, employees }) => {
   const emp = employees.find(
     (e) => String(e.id ?? e._id ?? e.employeeId) === String(allowance.employeeId)
@@ -15,20 +26,11 @@ const AllowanceRow = memo(({ allowance, index, onEdit, onDelete, employees }) =>
     ? `${emp.firstName?.[0] ?? ""}${emp.lastName?.[0] ?? ""}`
     : (String(allowance.employeeId)?.[0] ?? "?");
 
-  const typeColors = {
-    Transport: { bg: "#e8f4ff", color: "#2563eb", icon: "bi-bus-front-fill" },
-    Meal:      { bg: "#fef3c7", color: "#d97706", icon: "bi-cup-hot-fill"   },
-    Housing:   { bg: "#f0fdf4", color: "#16a34a", icon: "bi-house-fill"     },
-    Medical:   { bg: "#fdf2f8", color: "#db2777", icon: "bi-heart-pulse-fill"},
-    Other:     { bg: "#f3f4f6", color: "#6b7280", icon: "bi-three-dots"     },
-  };
-  const tc = typeColors[allowance.type] ?? typeColors.Other;
+  const tc = TYPE_CONFIG[allowance.type] ?? TYPE_CONFIG.Other;
 
   return (
     <tr style={{ animation: `fadeSlideIn 0.3s ease both`, animationDelay: `${index * 40}ms` }}>
-      <td>
-        <span className="allowance-index">{String(index + 1).padStart(2, "0")}</span>
-      </td>
+      <td><span className="allowance-index">{String(index + 1).padStart(2, "0")}</span></td>
       <td>
         <div className="allowance-empid-cell">
           <div className="allowance-avatar">{initials.toUpperCase()}</div>
@@ -40,14 +42,12 @@ const AllowanceRow = memo(({ allowance, index, onEdit, onDelete, employees }) =>
       </td>
       <td>
         <span className="type-pill" style={{ background: tc.bg, color: tc.color }}>
-          <i className={`bi ${tc.icon}`} />
-          {allowance.type || "—"}
+          <i className={`bi ${tc.icon}`} /> {allowance.type || "—"}
         </span>
       </td>
       <td>
         <span className="salary-pill">
-          <span className="lkr-label">LKR</span>
-          {Number(allowance.amount || 0).toLocaleString()}
+          <span className="lkr-label">LKR</span> {Number(allowance.amount || 0).toLocaleString()}
         </span>
       </td>
       <td>
@@ -74,14 +74,11 @@ const DeleteModal = memo(({ allowance, onConfirm, onCancel, employees }) => {
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="confirm-icon">
-          <i className="bi bi-exclamation-triangle-fill" />
-        </div>
+        <div className="confirm-icon"><i className="bi bi-exclamation-triangle-fill" /></div>
         <h5>Delete Allowance?</h5>
         <p>
           Are you sure you want to remove the <strong>{allowance?.type}</strong> allowance for{" "}
           <strong>{empName}</strong> (LKR {Number(allowance?.amount || 0).toLocaleString()})?
-          This action cannot be undone.
         </p>
         <div className="confirm-actions">
           <button className="btn-cancel" onClick={onCancel}>Cancel</button>
@@ -94,30 +91,17 @@ const DeleteModal = memo(({ allowance, onConfirm, onCancel, employees }) => {
   );
 });
 
-
+/* ── Main Component ── */
 function Allowance() {
-  const EMPTY_FORM = { employeeId: "", type: "", amount: "" };
-
-  const [allowanceList, setAllowanceList]   = useState([]);
-  const [employees, setEmployees]           = useState([]);
-  const [form, setForm]                     = useState(EMPTY_FORM);
-  const [editingId, setEditingId]           = useState(null);
-  const [deleteTarget, setDeleteTarget]     = useState(null);
-  const [loading, setLoading]               = useState(false);
-  const [empLoading, setEmpLoading]         = useState(false);
-  const [toast, setToast]                   = useState(null);
-  const [search, setSearch]                 = useState("");
-
-  useEffect(() => {
-    fetchAllowanceList();
-    fetchEmployees();
-  }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  const [allowanceList, setAllowanceList] = useState([]);
+  const [employees, setEmployees]         = useState([]);
+  const [form, setForm]                   = useState(EMPTY_FORM);
+  const [editingId, setEditingId]         = useState(null);
+  const [deleteTarget, setDeleteTarget]   = useState(null);
+  const [loading, setLoading]             = useState(false);
+  const [empLoading, setEmpLoading]       = useState(false);
+  const [toast, setToast]                 = useState(null);
+  const [search, setSearch]               = useState("");
 
   const showToast = useCallback((msg, type = "success") => setToast({ msg, type }), []);
 
@@ -137,8 +121,21 @@ function Allowance() {
       .finally(() => setEmpLoading(false));
   }, [showToast]);
 
+  // Combined fetch in one effect
+  useEffect(() => {
+    fetchAllowanceList();
+    fetchEmployees();
+  }, [fetchAllowanceList, fetchEmployees]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const handleChange = useCallback((e) => {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   }, []);
 
   const handleClear = useCallback(() => {
@@ -184,7 +181,7 @@ function Allowance() {
   }, [deleteTarget, fetchAllowanceList, showToast]);
 
   const filtered = allowanceList.filter((a) => {
-    const q   = search.toLowerCase();
+    const q = search.toLowerCase();
     const emp = employees.find(
       (e) => String(e.id ?? e._id ?? e.employeeId) === String(a.employeeId)
     );
@@ -192,31 +189,19 @@ function Allowance() {
     return (
       name.includes(q) ||
       String(a.employeeId).toLowerCase().includes(q) ||
-      (a.type  || "").toLowerCase().includes(q) ||
+      (a.type || "").toLowerCase().includes(q) ||
       String(a.amount).includes(q)
     );
   });
-
-  const isEdit = editingId !== null;
 
   const selectedEmp = employees.find(
     (e) => String(e.id ?? e._id ?? e.employeeId) === String(form.employeeId)
   );
 
-  /* type icon map for the form select preview */
-  const typeIconMap = {
-    Transport: { icon: "bi-bus-front-fill", color: "#2563eb" },
-    Meal:      { icon: "bi-cup-hot-fill",   color: "#d97706" },
-    Housing:   { icon: "bi-house-fill",     color: "#16a34a" },
-    Medical:   { icon: "bi-heart-pulse-fill",color: "#db2777"},
-    Other:     { icon: "bi-three-dots",     color: "#6b7280" },
-  };
-  const selectedType = typeIconMap[form.type];
+  const selectedTypeConfig = TYPE_CONFIG[form.type];
 
   return (
     <div className="allowance-page">
-
-      {/* ── Toast ── */}
       {toast && (
         <div className={`toast-bar ${toast.type}`}>
           <i className={`bi ${toast.type === "success" ? "bi-check-circle-fill" : "bi-x-circle-fill"}`} />
@@ -245,36 +230,26 @@ function Allowance() {
         </span>
       </div>
 
-      {/* ── Form card ── */}
       <div className="allowance-card">
         <div className="allowance-card-header">
-          <div className="card-icon blue">
-            <i className="bi bi-plus-circle-fill" />
-          </div>
+          <div className="card-icon blue"><i className="bi bi-plus-circle-fill" /></div>
           <div>
-            <div className="card-title">{isEdit ? "Edit Allowance" : "Add New Allowance"}</div>
+            <div className="card-title">{editingId ? "Edit Allowance" : "Add New Allowance"}</div>
             <div className="card-subtitle">
-              {isEdit ? "Update the allowance information" : "Fill in the details below"}
+              {editingId ? "Update the allowance information" : "Fill in the details below"}
             </div>
           </div>
-          <span className={`mode-tag ${isEdit ? "edit" : "create"}`}>
-            <i className={`bi ${isEdit ? "bi-pencil-fill" : "bi-plus-circle-fill"}`} />
-            {isEdit ? "Edit Mode" : "Create Mode"}
+          <span className={`mode-tag ${editingId ? "edit" : "create"}`}>
+            <i className={`bi ${editingId ? "bi-pencil-fill" : "bi-plus-circle-fill"}`} />
+            {editingId ? "Edit Mode" : "Create Mode"}
           </span>
         </div>
 
         <form className="allowance-form-body" onSubmit={handleSubmit}>
           <div className="row g-3">
-
-            {/* ── Employee combobox ── */}
             <div className="col-md-4">
               <label className="form-label-sm">
-                Employee
-                {empLoading && (
-                  <span className="ms-2" style={{ fontSize: "11px", color: "#9ca3af" }}>
-                    <i className="bi bi-arrow-repeat spin-icon" /> Loading…
-                  </span>
-                )}
+                Employee {empLoading && <i className="bi bi-arrow-repeat spin-icon ms-1" />}
               </label>
               <select
                 name="employeeId"
@@ -289,31 +264,24 @@ function Allowance() {
                   const id = emp.id ?? emp._id ?? emp.employeeId;
                   return (
                     <option key={id} value={id}>
-                      {emp.firstName} {emp.lastName}
-                      {emp.department ? ` · ${emp.department}` : ""}
+                      {emp.firstName} {emp.lastName} {emp.department ? ` · ${emp.department}` : ""}
                     </option>
                   );
                 })}
               </select>
-
               {selectedEmp && (
                 <div className="emp-chip">
                   <div className="emp-chip-avatar">
                     {selectedEmp.firstName?.[0]}{selectedEmp.lastName?.[0]}
                   </div>
                   <div>
-                    <div className="emp-chip-name">
-                      {selectedEmp.firstName} {selectedEmp.lastName}
-                    </div>
-                    <div className="emp-chip-meta">
-                      {selectedEmp.designation || selectedEmp.department || ""}
-                    </div>
+                    <div className="emp-chip-name">{selectedEmp.firstName} {selectedEmp.lastName}</div>
+                    <div className="emp-chip-meta">{selectedEmp.designation || selectedEmp.department || ""}</div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* ── Allowance Type combobox ── */}
             <div className="col-md-4">
               <label className="form-label-sm">Allowance Type</label>
               <select
@@ -328,17 +296,14 @@ function Allowance() {
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
-
-              {/* Type chip preview */}
-              {selectedType && (
-                <div className="type-chip" style={{ borderColor: selectedType.color + "44", background: selectedType.color + "11" }}>
-                  <i className={`bi ${selectedType.icon}`} style={{ color: selectedType.color }} />
-                  <span style={{ color: selectedType.color, fontWeight: 700 }}>{form.type}</span>
+              {selectedTypeConfig && (
+                <div className="type-chip" style={{ borderColor: selectedTypeConfig.color + "44", background: selectedTypeConfig.color + "11" }}>
+                  <i className={`bi ${selectedTypeConfig.icon}`} style={{ color: selectedTypeConfig.color }} />
+                  <span style={{ color: selectedTypeConfig.color, fontWeight: 700 }}>{form.type}</span>
                 </div>
               )}
             </div>
 
-            {/* ── Amount ── */}
             <div className="col-md-4">
               <label className="form-label-sm">Amount (LKR)</label>
               <div className="amount-wrap">
@@ -355,21 +320,13 @@ function Allowance() {
                 />
               </div>
             </div>
-
           </div>
 
           <div className="form-actions">
-            {isEdit ? (
-              <button type="submit" className="btn-update" disabled={loading}>
-                <i className="bi bi-check2-circle" />
-                {loading ? "Updating…" : "Update Allowance"}
-              </button>
-            ) : (
-              <button type="submit" className="btn-save" disabled={loading}>
-                <i className="bi bi-plus-circle-fill" />
-                {loading ? "Saving…" : "Save Allowance"}
-              </button>
-            )}
+            <button type="submit" className={editingId ? "btn-update" : "btn-save"} disabled={loading}>
+              <i className={editingId ? "bi bi-check2-circle" : "bi-plus-circle-fill"} />
+              {loading ? " Processing..." : editingId ? " Update Allowance" : " Save Allowance"}
+            </button>
             <button type="button" className="btn-clear" onClick={handleClear}>
               <i className="bi bi-x-circle" /> Clear
             </button>
@@ -377,7 +334,6 @@ function Allowance() {
         </form>
       </div>
 
-      {/* ── Table card ── */}
       <div className="allowance-card">
         <div className="allowance-card-header" style={{ paddingBottom: "16px", borderBottom: "1px solid #f0f2f7" }}>
           <div className="card-icon green"><i className="bi bi-table" /></div>
@@ -389,7 +345,7 @@ function Allowance() {
             <i className="bi bi-search" />
             <input
               className="search-input"
-              placeholder="Search by name, type or amount…"
+              placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -408,12 +364,9 @@ function Allowance() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {loading && allowanceList.length === 0 ? (
                 <tr className="loading-row">
-                  <td colSpan="5">
-                    <div className="spinner" />
-                    Loading allowances…
-                  </td>
+                  <td colSpan="5"><div className="spinner" /> Loading allowances…</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
@@ -440,7 +393,6 @@ function Allowance() {
           </table>
         </div>
       </div>
-
     </div>
   );
 }
