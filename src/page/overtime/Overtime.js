@@ -4,7 +4,7 @@ import OvertimeService from "../../service/OvertimeService ";
 import EmployeeService from "../../service/EmployeeService";
 import "./overtime.css";
 
-/* ── helpers ── */
+/* ── 1. Static Helpers & Constants (Defined outside to be stable) ── */
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -12,7 +12,7 @@ const EMPTY = {
   id: null, employeeId: "", date: "", hours: "", ratePerHour: "", totalAmount: 0,
 };
 
-/* ── Delete modal ── */
+/* ── 2. Memoized Sub-components ── */
 const DeleteModal = memo(({ target, employees, onConfirm, onCancel }) => {
   const emp = employees.find(
     (e) => String(e.id ?? e._id ?? e.employeeId) === String(target?.employeeId)
@@ -39,7 +39,6 @@ const DeleteModal = memo(({ target, employees, onConfirm, onCancel }) => {
   );
 });
 
-/* ── Table row ── */
 const OvertimeRow = memo(({ rec, index, employees, onEdit, onDelete }) => {
   const emp = employees.find(
     (e) => String(e.id ?? e._id ?? e.employeeId) === String(rec.employeeId)
@@ -98,7 +97,7 @@ const OvertimeRow = memo(({ rec, index, employees, onEdit, onDelete }) => {
   );
 });
 
-
+/* ── 3. Main Component ── */
 export default function OvertimePage() {
   const [records,      setRecords]      = useState([]);
   const [employees,    setEmployees]    = useState([]);
@@ -112,22 +111,24 @@ export default function OvertimePage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const toastTimer = useRef(null);
 
-  const computedTotal =
-    parseFloat(form.hours || 0) * parseFloat(form.ratePerHour || 0);
+  const computedTotal = parseFloat(form.hours || 0) * parseFloat(form.ratePerHour || 0);
 
-  useEffect(() => { fetchRecords(); fetchEmployees(); }, []);
-
+  // Define showToast first
   const showToast = useCallback((msg, type = "success") => {
     clearTimeout(toastTimer.current);
     setToast({ msg, type });
     toastTimer.current = setTimeout(() => setToast(null), 3200);
   }, []);
 
+  // Define fetchers before useEffect
   const fetchRecords = useCallback(() => {
     setLoading(true);
     OvertimeService.getAllOvertime()
       .then((data) => setRecords(Array.isArray(data) ? data : []))
-      .catch((err) => { console.error(err); showToast("Failed to load overtime records", "error"); })
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Failed to load overtime records", "error"); 
+      })
       .finally(() => setLoading(false));
   }, [showToast]);
 
@@ -135,16 +136,28 @@ export default function OvertimePage() {
     setEmpLoading(true);
     EmployeeService.getAllEmployees()
       .then((data) => setEmployees(Array.isArray(data) ? data : []))
-      .catch((err) => { console.error(err); showToast("Failed to load employees", "error"); })
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Failed to load employees", "error"); 
+      })
       .finally(() => setEmpLoading(false));
   }, [showToast]);
+
+  // NOW call useEffect (fixes 'use-before-define')
+  useEffect(() => { 
+    fetchRecords(); 
+    fetchEmployees(); 
+  }, [fetchRecords, fetchEmployees]); // Fixes 'exhaustive-deps'
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   }, []);
 
-  const handleClear = useCallback(() => { setForm(EMPTY); setIsEdit(false); }, []);
+  const handleClear = useCallback(() => { 
+    setForm(EMPTY); 
+    setIsEdit(false); 
+  }, []);
 
   const handleEdit = useCallback((rec) => {
     setForm({
@@ -175,8 +188,15 @@ export default function OvertimePage() {
       : OvertimeService.createOvertime(payload);
 
     action
-      .then(() => { fetchRecords(); showToast(isEdit ? "Overtime record updated." : "Overtime record saved."); handleClear(); })
-      .catch((err) => { console.error(err); showToast("Operation failed", "error"); })
+      .then(() => { 
+        fetchRecords(); 
+        showToast(isEdit ? "Overtime record updated." : "Overtime record saved."); 
+        handleClear(); 
+      })
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Operation failed", "error"); 
+      })
       .finally(() => setSaving(false));
   }, [form, isEdit, computedTotal, fetchRecords, showToast, handleClear]);
 
@@ -184,8 +204,14 @@ export default function OvertimePage() {
     if (!deleteTarget) return;
     const id = deleteTarget.id ?? deleteTarget._id ?? deleteTarget.overtimeId;
     OvertimeService.deleteOvertime(id)
-      .then(() => { fetchRecords(); showToast("Record deleted."); })
-      .catch((err) => { console.error(err); showToast("Delete failed", "error"); })
+      .then(() => { 
+        fetchRecords(); 
+        showToast("Record deleted."); 
+      })
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Delete failed", "error"); 
+      })
       .finally(() => setDeleteTarget(null));
   }, [deleteTarget, fetchRecords, showToast]);
 
@@ -204,8 +230,6 @@ export default function OvertimePage() {
 
   return (
     <div className="deduction-page">
-
-      {/* ── Toast ── */}
       {toast && (
         <div className={`toast-bar ${toast.type}`}>
           <i className={`bi ${toast.type === "success" ? "bi-check-circle-fill" : "bi-x-circle-fill"}`} />
@@ -213,7 +237,6 @@ export default function OvertimePage() {
         </div>
       )}
 
-      {/* ── Delete modal ── */}
       {deleteTarget && (
         <DeleteModal
           target={deleteTarget}
@@ -223,7 +246,6 @@ export default function OvertimePage() {
         />
       )}
 
-      {/* ── Page header ── */}
       <div className="deduction-header">
         <div className="d-flex align-items-center gap-2">
           <h2>
@@ -236,7 +258,6 @@ export default function OvertimePage() {
         </span>
       </div>
 
-      {/* ── Form card ── */}
       <div className="deduction-card" style={{ animation: "fadeSlideIn 0.3s ease" }}>
         <div className="deduction-card-header">
           <div className={`card-icon ${isEdit ? "amber" : "blue"}`}>
@@ -256,8 +277,6 @@ export default function OvertimePage() {
 
         <div className="deduction-form-body">
           <div className="row g-3">
-
-            {/* ── Employee combobox ── */}
             <div className="col-md-4">
               <label className="form-label-sm">
                 Employee *
@@ -299,7 +318,6 @@ export default function OvertimePage() {
               )}
             </div>
 
-            {/* ── Date ── */}
             <div className="col-md-2">
               <label className="form-label-sm">Date *</label>
               <input
@@ -312,7 +330,6 @@ export default function OvertimePage() {
               />
             </div>
 
-            {/* ── Hours ── */}
             <div className="col-md-2">
               <label className="form-label-sm">Hours *</label>
               <input
@@ -328,7 +345,6 @@ export default function OvertimePage() {
               />
             </div>
 
-            {/* ── Rate per hour ── */}
             <div className="col-md-2">
               <label className="form-label-sm">Rate / Hour (LKR) *</label>
               <div className="amount-wrap">
@@ -346,11 +362,9 @@ export default function OvertimePage() {
               </div>
             </div>
 
-            {/* ── Total (read-only, computed) ── */}
             <div className="col-md-2">
               <label className="form-label-sm">Total Amount</label>
               <div className="amount-wrap">
-      
                 <input
                   type="text"
                   value={fmt(computedTotal)}
@@ -360,34 +374,15 @@ export default function OvertimePage() {
                   style={{ background: "#f0f4ff", color: "#3b62f6", fontWeight: 700 }}
                 />
               </div>
-              {computedTotal > 0 && (
-                <div className="mt-1" style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  fontSize: 11, fontWeight: 700, color: "#3b62f6",
-                  background: "#e8edff", borderRadius: 20, padding: "2px 10px"
-                }}>
-                  <i className="bi bi-calculator" />  {fmt(computedTotal)}
-                </div>
-              )}
             </div>
-
           </div>
 
-          {/* ── Actions ── */}
           <div className="form-actions">
-            {isEdit ? (
-              <button className="btn-update" onClick={handleSubmit} disabled={saving}>
-                {saving
-                  ? <><i className="bi bi-arrow-repeat spin-icon" /> Updating…</>
-                  : <><i className="bi bi-pencil-square" /> Update Record</>}
-              </button>
-            ) : (
-              <button className="btn-save" onClick={handleSubmit} disabled={saving}>
-                {saving
-                  ? <><i className="bi bi-arrow-repeat spin-icon" /> Saving…</>
-                  : <><i className="bi bi-check-circle" /> Save Record</>}
-              </button>
-            )}
+            <button className={isEdit ? "btn-update" : "btn-save"} onClick={handleSubmit} disabled={saving}>
+              {saving
+                ? <><i className="bi bi-arrow-repeat spin-icon" /> {isEdit ? "Updating…" : "Saving…"}</>
+                : <><i className={isEdit ? "bi bi-pencil-square" : "bi-check-circle"} /> {isEdit ? "Update Record" : "Save Record"}</>}
+            </button>
             <button className="btn-clear" onClick={handleClear}>
               <i className="bi bi-x-circle" /> Clear
             </button>
@@ -395,7 +390,6 @@ export default function OvertimePage() {
         </div>
       </div>
 
-      {/* ── Table card ── */}
       <div className="deduction-card">
         <div className="deduction-card-header" style={{ paddingBottom: 16, borderBottom: "1px solid #f0f2f7" }}>
           <div className="card-icon green"><i className="bi bi-table" /></div>
@@ -460,7 +454,6 @@ export default function OvertimePage() {
           </table>
         </div>
       </div>
-
     </div>
   );
 }

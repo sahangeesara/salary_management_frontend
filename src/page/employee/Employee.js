@@ -2,6 +2,12 @@ import React, { useState, useEffect, useCallback, memo } from "react";
 import EmployeeService from "../../service/EmployeeService";
 import "./employee.css";
 
+// 1. Move static constants outside the component to avoid dependency issues
+const EMPTY_FORM = {
+  firstName: "", lastName: "", email: "", phone: "",
+  basicSalary: "", department: "", designation: "", status: "ACTIVE",
+};
+
 const EmployeeRow = memo(({ emp, index, onEdit, onDelete }) => (
   <tr style={{ animation: `fadeSlideIn 0.3s ease both`, animationDelay: `${index * 40}ms` }}>
     <td>
@@ -69,11 +75,6 @@ const DeleteModal = memo(({ employee, onConfirm, onCancel }) => (
 
 
 function Employee() {
-  const EMPTY_FORM = {
-    firstName: "", lastName: "", email: "", phone: "",
-    basicSalary: "", department: "", designation: "", status: "ACTIVE",
-  };
-
   const [employees, setEmployees]   = useState([]);
   const [form, setForm]             = useState(EMPTY_FORM);
   const [editingId, setEditingId]   = useState(null);  
@@ -82,7 +83,27 @@ function Employee() {
   const [toast, setToast]           = useState(null);   
   const [search, setSearch]         = useState("");
 
-  useEffect(() => { fetchEmployees(); }, []);
+  // 2. Wrap showToast in useCallback because it's a dependency for other hooks
+  const showToast = useCallback((msg, type = "success") => {
+    setToast({ msg, type });
+  }, []);
+
+  // 3. fetchEmployees wrapped in useCallback
+  const fetchEmployees = useCallback(() => {
+    setLoading(true);
+    EmployeeService.getAllEmployees()
+      .then(data => setEmployees(Array.isArray(data) ? data : []))
+      .catch(err => { 
+        console.error(err); 
+        showToast("Failed to load employees", "error"); 
+      })
+      .finally(() => setLoading(false));
+  }, [showToast]);
+
+  // Initial load - include fetchEmployees in dependencies
+  useEffect(() => { 
+    fetchEmployees(); 
+  }, [fetchEmployees]);
 
   /* auto-dismiss toast */
   useEffect(() => {
@@ -91,21 +112,15 @@ function Employee() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const showToast = (msg, type = "success") => setToast({ msg, type });
-
-  const fetchEmployees = useCallback(() => {
-    setLoading(true);
-    EmployeeService.getAllEmployees()
-      .then(data => setEmployees(Array.isArray(data) ? data : []))
-      .catch(err => { console.error(err); showToast("Failed to load employees", "error"); })
-      .finally(() => setLoading(false));
-  }, []);
-
   const handleChange = useCallback((e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   }, []);
 
-  const handleClear = () => { setForm(EMPTY_FORM); setEditingId(null); };
+  // 4. Wrap handleClear in useCallback
+  const handleClear = useCallback(() => { 
+    setForm(EMPTY_FORM); 
+    setEditingId(null); 
+  }, []);
 
   /* ── Edit: populate form ── */
   const handleEdit = useCallback((emp) => {
@@ -138,19 +153,28 @@ function Employee() {
         showToast(editingId ? "Employee updated!" : "Employee created!");
         handleClear();
       })
-      .catch(err => { console.error(err); showToast("Operation failed", "error"); })
+      .catch(err => { 
+        console.error(err); 
+        showToast("Operation failed", "error"); 
+      })
       .finally(() => setLoading(false));
-  }, [form, editingId, fetchEmployees]);
+  }, [form, editingId, fetchEmployees, showToast, handleClear]);
 
   /* ── Delete ── */
   const handleDeleteConfirm = useCallback(() => {
     if (!deleteTarget) return;
     const id = deleteTarget.id ?? deleteTarget._id ?? deleteTarget.employeeId;
     EmployeeService.deleteEmployee(id)
-      .then(() => { fetchEmployees(); showToast("Employee deleted"); })
-      .catch(err => { console.error(err); showToast("Delete failed", "error"); })
+      .then(() => { 
+        fetchEmployees(); 
+        showToast("Employee deleted"); 
+      })
+      .catch(err => { 
+        console.error(err); 
+        showToast("Delete failed", "error"); 
+      })
       .finally(() => setDeleteTarget(null));
-  }, [deleteTarget, fetchEmployees]);
+  }, [deleteTarget, fetchEmployees, showToast]);
 
   /* ── Filtered list ── */
   const filtered = employees.filter(emp => {
@@ -166,7 +190,6 @@ function Employee() {
   const isEdit = editingId !== null;
 
   return (
-   
       <div className="emp-page">
 
         {toast && (
@@ -183,7 +206,6 @@ function Employee() {
             onCancel={() => setDeleteTarget(null)}
           />
         )}
-
 
         <div className="emp-header">
           <div>
@@ -259,7 +281,6 @@ function Employee() {
           </form>
         </div>
 
-    
         <div className="emp-card">
           <div className="emp-card-header" style={{ paddingBottom: "16px", borderBottom: "1px solid #f0f2f7" }}>
             <div className="card-icon green"><i className="bi bi-table" /></div>
@@ -324,9 +345,7 @@ function Employee() {
             </table>
           </div>
         </div>
-
       </div>
-
   );
 }
 
