@@ -1,9 +1,18 @@
-import React, { useState, useEffect, useCallback, memo } from "react";
+import React, { useState, useEffect, useCallback, memo, useMemo } from "react";
 import EmployeeLeaveService from "../../service/EmployeeLeaveService";
 import EmployeeService from "../../service/EmployeeService";
 import "./employeeLeave.css";
 
 const LEAVE_TYPES = ["ANNUAL", "CASUAL", "SICK"];
+
+const EMPTY_FORM = {
+  employeeId: "",
+  leaveType:  "",
+  startDate:  "",
+  endDate:    "",
+  totalDays:  "",
+  reason:     "",
+};
 
 /* ── calculate total days between two dates (inclusive) ── */
 const calcTotalDays = (start, end) => {
@@ -30,7 +39,7 @@ const EmployeeLeaveRow = memo(({ employeeLeave, index, onEdit, onDelete, employe
     CASUAL: { bg: "#fef3c7", color: "#d97706", icon: "bi-clock-history" },
     SICK:   { bg: "#f0fdf4", color: "#16a34a", icon: "bi-hospital" },
   };
-  const tc = typeColors[employeeLeave.leaveType] ?? typeColors.ANNUAL;
+  const tc = typeColors[employeeLeave.leaveType] ?? { bg: "#f3f4f6", color: "#6b7280", icon: "bi-info-circle" };
 
   return (
     <tr style={{ animation: `fadeSlideIn 0.3s ease both`, animationDelay: `${index * 40}ms` }}>
@@ -40,7 +49,7 @@ const EmployeeLeaveRow = memo(({ employeeLeave, index, onEdit, onDelete, employe
           <div className="employeeLeave-avatar">{initials.toUpperCase()}</div>
           <div>
             <div className="employeeLeave-fullname">{empName}</div>
-            <div className="employeeLeave-dept-tag">{emp?.department || ""}</div>
+            <div className="employeeLeave-dept-tag">{emp?.department || "N/A"}</div>
           </div>
         </div>
       </td>
@@ -55,7 +64,7 @@ const EmployeeLeaveRow = memo(({ employeeLeave, index, onEdit, onDelete, employe
       <td><span className="salary-pill">{Number(employeeLeave.totalDays || 0).toLocaleString()} days</span></td>
       <td>
         <div className="action-group">
-          <button className="action-btn edit-btn"   onClick={() => onEdit(employeeLeave)}   title="Edit">
+          <button className="action-btn edit-btn" onClick={() => onEdit(employeeLeave)} title="Edit">
             <i className="bi bi-pencil-fill" />
           </button>
           <button className="action-btn delete-btn" onClick={() => onDelete(employeeLeave)} title="Delete">
@@ -88,7 +97,7 @@ const DeleteModal = memo(({ employeeLeave, onConfirm, onCancel, employees }) => 
         <div className="confirm-actions">
           <button className="btn-cancel" onClick={onCancel}>Cancel</button>
           <button className="btn-confirm-delete" onClick={onConfirm}>
-            <i className="bi bi-trash3-fill" /> Delete
+            <i className="bi bi-trash3-fill me-1" /> Delete
           </button>
         </div>
       </div>
@@ -96,39 +105,16 @@ const DeleteModal = memo(({ employeeLeave, onConfirm, onCancel, employees }) => 
   );
 });
 
-/* ══════════════════════════════════════════════════════
-   Main component
-══════════════════════════════════════════════════════ */
 function EmployeeLeave() {
-  const EMPTY_FORM = {
-    employeeId: "",
-    leaveType:  "",
-    startDate:  "",
-    endDate:    "",
-    totalDays:  "",
-    reason:     "",
-  };
-
   const [employeeLeaveList, setEmployeeLeaveList] = useState([]);
-  const [employees,         setEmployees]         = useState([]);
-  const [form,              setForm]              = useState(EMPTY_FORM);
-  const [editingId,         setEditingId]         = useState(null);
-  const [deleteTarget,      setDeleteTarget]      = useState(null);
-  const [loading,           setLoading]           = useState(false);
-  const [empLoading,        setEmpLoading]        = useState(false);
-  const [toast,             setToast]             = useState(null);
-  const [search,            setSearch]            = useState("");
-
-  useEffect(() => {
-    fetchEmployeeLeaveList();
-    fetchEmployees();
-  }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
+  const [employees, setEmployees] = useState([]);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [empLoading, setEmpLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [search, setSearch] = useState("");
 
   const showToast = useCallback((msg, type = "success") => setToast({ msg, type }), []);
 
@@ -148,7 +134,17 @@ function EmployeeLeave() {
       .finally(() => setEmpLoading(false));
   }, [showToast]);
 
-  /* ── handleChange: auto-calc totalDays when startDate or endDate changes ── */
+  useEffect(() => {
+    fetchEmployeeLeaveList();
+    fetchEmployees();
+  }, [fetchEmployeeLeaveList, fetchEmployees]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setForm((prev) => {
@@ -207,7 +203,6 @@ function EmployeeLeave() {
       .finally(() => setDeleteTarget(null));
   }, [deleteTarget, fetchEmployeeLeaveList, showToast]);
 
-  /* ── filtered list ── */
   const filtered = employeeLeaveList.filter((a) => {
     const q   = search.toLowerCase();
     const emp = employees.find(
@@ -222,8 +217,9 @@ function EmployeeLeave() {
   });
 
   const isEdit      = editingId !== null;
-  const selectedEmp = employees.find(
-    (e) => String(e.id ?? e._id ?? e.employeeId) === String(form.employeeId)
+  const selectedEmp = useMemo(() => 
+    employees.find((e) => String(e.id ?? e._id ?? e.employeeId) === String(form.employeeId)),
+    [employees, form.employeeId]
   );
 
   const typeIconMap = {
@@ -232,17 +228,12 @@ function EmployeeLeave() {
     SICK:   { icon: "bi-hospital",       color: "#16a34a" },
   };
   const selectedType = typeIconMap[form.leaveType];
-
-  /* ── preview label for total days ── */
   const totalDaysPreview = form.totalDays
     ? `${form.totalDays} day${form.totalDays === "1" ? "" : "s"}`
     : null;
 
-  /* ════════════════════════ RENDER ════════════════════════ */
   return (
     <div className="employeeLeave-page">
-
-      {/* ── Toast ── */}
       {toast && (
         <div className={`toast-bar ${toast.type}`}>
           <i className={`bi ${toast.type === "success" ? "bi-check-circle-fill" : "bi-x-circle-fill"}`} />
@@ -250,7 +241,6 @@ function EmployeeLeave() {
         </div>
       )}
 
-      {/* ── Delete modal ── */}
       {deleteTarget && (
         <DeleteModal
           employeeLeave={deleteTarget}
@@ -260,32 +250,19 @@ function EmployeeLeave() {
         />
       )}
 
-      {/* ── Page header ── */}
       <div className="employeeLeave-header">
         <div>
-          <h2>
-            <i className="bi bi-calendar2-check-fill me-2" style={{ color: "#3b62f6" }} />
-            Employee Leave Management
-          </h2>
+          <h2><i className="bi bi-calendar-check me-2" style={{ color: "#3b62f6" }} />Leave Management</h2>
         </div>
-        <span className="employeeLeave-count">
-          {employeeLeaveList.length} record{employeeLeaveList.length !== 1 ? "s" : ""}
-        </span>
+        <span className="employeeLeave-count">{employeeLeaveList.length} records</span>
       </div>
 
-      {/* ══════════════ FORM CARD ══════════════ */}
       <div className="employeeLeave-card">
         <div className="employeeLeave-card-header">
-          <div className="card-icon" style={isEdit
-            ? { background:"#fff4e5", color:"#ef6c00", width:34, height:34, borderRadius:9, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }
-            : { background:"#e8edff", color:"#3b62f6", width:34, height:34, borderRadius:9, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>
-            <i className={`bi ${isEdit ? "bi-pencil-fill" : "bi-plus-circle-fill"}`} />
-          </div>
+          <div className="card-icon blue"><i className="bi bi-journal-plus" /></div>
           <div>
-            <div className="card-title">{isEdit ? "Edit Leave Record" : "Add New Leave Record"}</div>
-            <div className="card-subtitle">
-              {isEdit ? "Update the leave information" : "Fill in the details below"}
-            </div>
+            <div className="card-title">{isEdit ? "Edit Leave Record" : "Request Leave"}</div>
+            <div className="card-subtitle">Manage employee attendance and time off</div>
           </div>
           <span className={`mode-tag ${isEdit ? "edit" : "create"}`}>
             <i className={`bi ${isEdit ? "bi-pencil-fill" : "bi-plus-circle-fill"}`} />
@@ -295,190 +272,77 @@ function EmployeeLeave() {
 
         <form className="employeeLeave-form-body" onSubmit={handleSubmit}>
           <div className="row g-3">
-
-            {/* Employee */}
             <div className="col-md-4">
-              <label className="form-label-sm">
-                Employee
-                {empLoading && (
-                  <span className="ms-2" style={{ fontSize: "11px", color: "#9ca3af" }}>
-                    <i className="bi bi-arrow-repeat spin-icon" /> Loading…
-                  </span>
-                )}
-              </label>
-              <select
-                name="employeeId"
-                className="employeeLeave-input employeeLeave-select"
-                value={form.employeeId}
-                onChange={handleChange}
-                required
-                disabled={empLoading}
-              >
-                <option value="">— Select Employee —</option>
-                {employees.map((emp) => {
-                  const id = emp.id ?? emp._id ?? emp.employeeId;
-                  return (
-                    <option key={id} value={id}>
-                      {emp.firstName} {emp.lastName}
-                      {emp.department ? ` · ${emp.department}` : ""}
-                    </option>
-                  );
-                })}
+              <label className="form-label-sm">Employee</label>
+              <select name="employeeId" className="employeeLeave-input employeeLeave-select" value={form.employeeId} onChange={handleChange} required>
+                <option value="">Select Employee</option>
+                {employees.map(emp => (
+                  <option key={emp.id ?? emp._id} value={emp.id ?? emp._id ?? emp.employeeId}>
+                    {emp.firstName} {emp.lastName}
+                  </option>
+                ))}
               </select>
               {selectedEmp && (
                 <div className="emp-chip">
-                  <div className="emp-chip-avatar">
-                    {selectedEmp.firstName?.[0]}{selectedEmp.lastName?.[0]}
-                  </div>
+                  <div className="emp-chip-avatar">{selectedEmp.firstName?.[0]}{selectedEmp.lastName?.[0]}</div>
                   <div>
-                    <div className="emp-chip-name">
-                      {selectedEmp.firstName} {selectedEmp.lastName}
-                    </div>
-                    <div className="emp-chip-meta">
-                      {selectedEmp.designation || selectedEmp.department || ""}
-                    </div>
+                    <div className="emp-chip-name">{selectedEmp.firstName} {selectedEmp.lastName}</div>
+                    <div className="emp-chip-meta">{selectedEmp.department}</div>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Leave Type */}
             <div className="col-md-4">
               <label className="form-label-sm">Leave Type</label>
-              <select
-                name="leaveType"
-                className="employeeLeave-input employeeLeave-select"
-                value={form.leaveType}
-                onChange={handleChange}
-                required
-              >
-                <option value="">— Select Type —</option>
-                {LEAVE_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
+              <select name="leaveType" className="employeeLeave-input employeeLeave-select" value={form.leaveType} onChange={handleChange} required>
+                <option value="">Select Type</option>
+                {LEAVE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
               {selectedType && (
-                <div className="emp-chip" style={{ borderColor: selectedType.color + "44", background: selectedType.color + "11" }}>
-                  <i className={`bi ${selectedType.icon}`} style={{ color: selectedType.color }} />
-                  <span style={{ color: selectedType.color, fontWeight: 700, fontSize: 13 }}>
-                    {form.leaveType}
-                  </span>
+                <div className="mt-2 small d-flex align-items-center gap-2" style={{ color: selectedType.color, fontWeight: 600 }}>
+                  <i className={`bi ${selectedType.icon}`} /> Selected: {form.leaveType}
                 </div>
               )}
             </div>
 
-            {/* Reason */}
             <div className="col-md-4">
-              <label className="form-label-sm">Reason</label>
-              <input
-                type="text"
-                name="reason"
-                className="employeeLeave-input"
-                value={form.reason}
-                onChange={handleChange}
-                placeholder="Enter reason…"
-              />
-            </div>
-
-            {/* Start Date */}
-            <div className="col-md-4">
-              <label className="form-label-sm">Start Date</label>
-              <input
-                type="date"
-                name="startDate"
-                className="employeeLeave-input"
-                value={form.startDate}
-                onChange={handleChange}
-                required
-              />
-            </div>
-
-            {/* End Date */}
-            <div className="col-md-4">
-              <label className="form-label-sm">End Date</label>
-              <input
-                type="date"
-                name="endDate"
-                className="employeeLeave-input"
-                value={form.endDate}
-                onChange={handleChange}
-                required
-                min={form.startDate || undefined}
-              />
-            </div>
-
-            {/* Total Days — auto-calculated, read-only */}
-            <div className="col-md-4">
-              <label className="form-label-sm">Total Days</label>
-              <div className="amount-wrap">
-                <span className="amount-prefix" style={{ fontSize: 11, left: 8 }}>
-                  <i className="bi bi-calendar3" />
-                </span>
-                <input
-                  type="text"
-                  name="totalDays"
-                  className="employeeLeave-input"
-                  value={totalDaysPreview ?? ""}
-                  readOnly
-                  placeholder="Auto-calculated"
-                  style={{
-                    paddingLeft: 30,
-                    background:  form.totalDays ? "#f0f4ff" : "#fafafa",
-                    color:       form.totalDays ? "#3b62f6" : "#9ca3af",
-                    fontWeight:  form.totalDays ? 700 : 400,
-                    cursor:      "default",
-                  }}
-                />
+              <label className="form-label-sm">Duration</label>
+              <div className="d-flex gap-2">
+                <input type="date" name="startDate" className="employeeLeave-input" value={form.startDate} onChange={handleChange} required />
+                <input type="date" name="endDate" className="employeeLeave-input" value={form.endDate} onChange={handleChange} required />
               </div>
-              {form.totalDays && (
-                <div style={{ marginTop: 6, display:"inline-flex", alignItems:"center", gap:5,
-                  background:"#e8edff", color:"#3b62f6", borderRadius:9,
-                  padding:"4px 12px", fontSize:12, fontWeight:700, border:"1px solid #c7d4fc" }}>
-                  <i className="bi bi-calendar-range" />
-                  {form.totalDays} day{form.totalDays === "1" ? "" : "s"} of leave
-                </div>
-              )}
+              {totalDaysPreview && <div className="mt-2 small text-primary fw-bold">Total: {totalDaysPreview}</div>}
             </div>
 
-          </div>{/* end row */}
+            <div className="col-12">
+              <label className="form-label-sm">Reason / Remarks</label>
+              <textarea name="reason" className="employeeLeave-input" value={form.reason} onChange={handleChange} rows="2" placeholder="Enter leave reason..." />
+            </div>
+          </div>
 
-          {/* Form actions */}
           <div className="form-actions">
-            {isEdit ? (
-              <button type="submit" className="btn-update" disabled={loading}>
-                <i className="bi bi-check2-circle" />
-                {loading ? "Updating…" : "Update Record"}
-              </button>
-            ) : (
-              <button type="submit" className="btn-save" disabled={loading}>
-                <i className="bi bi-plus-circle-fill" />
-                {loading ? "Saving…" : "Save Record"}
-              </button>
-            )}
+            <button type="submit" className={isEdit ? "btn-update" : "btn-save"} disabled={loading}>
+              <i className={`bi ${isEdit ? "bi-check2-circle" : "bi-save-fill"}`} />
+              {loading ? "Processing..." : isEdit ? "Update Record" : "Save Record"}
+            </button>
             <button type="button" className="btn-clear" onClick={handleClear}>
               <i className="bi bi-x-circle" /> Clear
             </button>
           </div>
-
         </form>
       </div>
 
-      {/* ══════════════ TABLE CARD ══════════════ */}
       <div className="employeeLeave-card">
         <div className="employeeLeave-card-header" style={{ paddingBottom: "16px", borderBottom: "1px solid #f0f2f7" }}>
           <div className="card-icon green"><i className="bi bi-table" /></div>
           <div>
-            <div className="card-title">Leave Records</div>
-            <div className="card-subtitle">Manage all employee leave entries</div>
+            <div className="card-title">Leave History</div>
+            <div className="card-subtitle">Review and manage past records</div>
           </div>
           <div className="search-wrap ms-auto">
             <i className="bi bi-search" />
-            <input
-              className="search-input"
-              placeholder="Search by name or type…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+            <input className="search-input" placeholder="Search by name or type..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
 
@@ -488,7 +352,7 @@ function EmployeeLeave() {
               <tr>
                 <th>#</th>
                 <th>Employee</th>
-                <th>Leave Type</th>
+                <th>Type</th>
                 <th>Start Date</th>
                 <th>End Date</th>
                 <th>Total Days</th>
@@ -496,31 +360,19 @@ function EmployeeLeave() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr className="loading-row">
-                  <td colSpan={7}>
-                    <div className="spinner" />
-                    Loading leave records…
-                  </td>
-                </tr>
+              {loading && employeeLeaveList.length === 0 ? (
+                <tr className="loading-row"><td colSpan="7"><div className="spinner" />Loading...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="employeeLeavety-state">
-                      <div className="employeeLeavety-icon"><i className="bi bi-calendar-x" /></div>
-                      <div>{search ? "No results found" : "No leave records yet"}</div>
-                    </div>
-                  </td>
-                </tr>
+                <tr><td colSpan="7"><div className="employeeLeavety-state">No records found.</div></td></tr>
               ) : (
                 filtered.map((leave, i) => (
-                  <EmployeeLeaveRow
-                    key={leave.id ?? leave._id ?? i}
-                    employeeLeave={leave}
-                    index={i}
-                    employees={employees}
-                    onEdit={handleEdit}
-                    onDelete={setDeleteTarget}
+                  <EmployeeLeaveRow 
+                    key={leave.id ?? leave._id ?? i} 
+                    employeeLeave={leave} 
+                    index={i} 
+                    employees={employees} 
+                    onEdit={handleEdit} 
+                    onDelete={setDeleteTarget} 
                   />
                 ))
               )}
@@ -528,7 +380,7 @@ function EmployeeLeave() {
           </table>
         </div>
       </div>
-
+      {empLoading && <div className="toast-bar success">Updating employee cache...</div>}
     </div>
   );
 }

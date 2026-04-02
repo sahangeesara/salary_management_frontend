@@ -3,6 +3,10 @@ import BonusService from "../../service/BonusService";
 import EmployeeService from "../../service/EmployeeService";
 import "./bonus.css";
 
+// 1. Move static constants OUTSIDE the component so they are stable 
+// and don't need to be in dependency arrays.
+const EMPTY_FORM = { employeeId: "", amount: "" };
+
 /* ── Memo-ised table row ── */
 const BonusRow = memo(({ bonus, index, onEdit, onDelete, employees }) => {
   const emp = employees.find(
@@ -78,8 +82,6 @@ const DeleteModal = memo(({ bonus, onConfirm, onCancel, employees }) => {
 });
 
 function Bonus() {
-  const EMPTY_FORM = { employeeId: "", amount: "" };
-
   const [bonusList, setBonusList]       = useState([]);
   const [employees, setEmployees]       = useState([]);
   const [form, setForm]                 = useState(EMPTY_FORM);
@@ -90,11 +92,38 @@ function Bonus() {
   const [toast, setToast]               = useState(null);
   const [search, setSearch]             = useState("");
 
+  // 2. Define showToast first so other functions can use it
+  const showToast = useCallback((msg, type = "success") => setToast({ msg, type }), []);
+
+  // 3. Wrap fetchers in useCallback and define them BEFORE useEffect
+  const fetchBonusList = useCallback(() => {
+    setLoading(true);
+    BonusService.getAllBonus()
+      .then((data) => setBonusList(Array.isArray(data) ? data : []))
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Failed to load bonuses", "error"); 
+      })
+      .finally(() => setLoading(false));
+  }, [showToast]);
+
+  const fetchEmployees = useCallback(() => {
+    setEmpLoading(true);
+    EmployeeService.getAllEmployees()
+      .then((data) => setEmployees(Array.isArray(data) ? data : []))
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Failed to load employees", "error"); 
+      })
+      .finally(() => setEmpLoading(false));
+  }, [showToast]);
+
   /* ── Load on mount ── */
+  // 4. Include dependencies in the array to satisfy exhaustive-deps
   useEffect(() => {
     fetchBonusList();
     fetchEmployees();
-  }, []);
+  }, [fetchBonusList, fetchEmployees]);
 
   /* ── Auto-dismiss toast ── */
   useEffect(() => {
@@ -102,26 +131,6 @@ function Bonus() {
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
-
-  const showToast = useCallback((msg, type = "success") => setToast({ msg, type }), []);
-
-  /* ── Fetch bonus list ── */
-  const fetchBonusList = useCallback(() => {
-    setLoading(true);
-    BonusService.getAllBonus()
-      .then((data) => setBonusList(Array.isArray(data) ? data : []))
-      .catch((err) => { console.error(err); showToast("Failed to load bonuses", "error"); })
-      .finally(() => setLoading(false));
-  }, [showToast]);
-
-  /* ── Fetch employees for combobox ── */
-  const fetchEmployees = useCallback(() => {
-    setEmpLoading(true);
-    EmployeeService.getAllEmployees()
-      .then((data) => setEmployees(Array.isArray(data) ? data : []))
-      .catch((err) => { console.error(err); showToast("Failed to load employees", "error"); })
-      .finally(() => setEmpLoading(false));
-  }, [showToast]);
 
   const handleChange = useCallback((e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -158,7 +167,10 @@ function Bonus() {
         showToast(editingId ? "Bonus updated!" : "Bonus created!");
         handleClear();
       })
-      .catch((err) => { console.error(err); showToast("Operation failed", "error"); })
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Operation failed", "error"); 
+      })
       .finally(() => setLoading(false));
   }, [form, editingId, fetchBonusList, showToast, handleClear]);
 
@@ -167,8 +179,14 @@ function Bonus() {
     if (!deleteTarget) return;
     const id = deleteTarget.id ?? deleteTarget._id ?? deleteTarget.bonusId;
     BonusService.deleteBonus(id)
-      .then(() => { fetchBonusList(); showToast("Bonus deleted"); })
-      .catch((err) => { console.error(err); showToast("Delete failed", "error"); })
+      .then(() => { 
+        fetchBonusList(); 
+        showToast("Bonus deleted"); 
+      })
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Delete failed", "error"); 
+      })
       .finally(() => setDeleteTarget(null));
   }, [deleteTarget, fetchBonusList, showToast]);
 
@@ -195,8 +213,6 @@ function Bonus() {
 
   return (
     <div className="bonus-page">
-
-      {/* ── Toast ── */}
       {toast && (
         <div className={`toast-bar ${toast.type}`}>
           <i className={`bi ${toast.type === "success" ? "bi-check-circle-fill" : "bi-x-circle-fill"}`} />
@@ -204,7 +220,6 @@ function Bonus() {
         </div>
       )}
 
-      {/* ── Delete confirm modal ── */}
       {deleteTarget && (
         <DeleteModal
           bonus={deleteTarget}
@@ -214,7 +229,6 @@ function Bonus() {
         />
       )}
 
-      {/* ── Header ── */}
       <div className="bonus-header">
         <div>
           <h2>
@@ -225,7 +239,6 @@ function Bonus() {
         <span className="bonus-count">{bonusList.length} bonus{bonusList.length !== 1 ? "es" : ""}</span>
       </div>
 
-      {/* ── Form card ── */}
       <div className="bonus-card">
         <div className="bonus-card-header">
           <div className="card-icon blue">
@@ -245,16 +258,9 @@ function Bonus() {
 
         <form className="bonus-form-body" onSubmit={handleSubmit}>
           <div className="row g-3">
-
-            {/* ── Employee combobox ── */}
             <div className="col-md-6">
               <label className="form-label-sm">
-                Employee
-                {empLoading && (
-                  <span className="ms-2" style={{ fontSize: "11px", color: "#9ca3af" }}>
-                    <i className="bi bi-arrow-repeat spin-icon" /> Loading…
-                  </span>
-                )}
+                Employee {empLoading && <i className="bi bi-arrow-repeat spin-icon ms-2" />}
               </label>
               <select
                 name="employeeId"
@@ -276,7 +282,6 @@ function Bonus() {
                 })}
               </select>
 
-              {/* Selected employee info chip */}
               {selectedEmp && (
                 <div className="emp-chip">
                   <div className="emp-chip-avatar">
@@ -294,7 +299,6 @@ function Bonus() {
               )}
             </div>
 
-            {/* ── Amount ── */}
             <div className="col-md-6">
               <label className="form-label-sm">Bonus Amount</label>
               <div className="amount-wrap">
@@ -311,21 +315,13 @@ function Bonus() {
                 />
               </div>
             </div>
-
           </div>
 
           <div className="form-actions">
-            {isEdit ? (
-              <button type="submit" className="btn-update" disabled={loading}>
-                <i className="bi bi-check2-circle" />
-                {loading ? "Updating…" : "Update Bonus"}
-              </button>
-            ) : (
-              <button type="submit" className="btn-save" disabled={loading}>
-                <i className="bi bi-gift-fill" />
-                {loading ? "Saving…" : "Save Bonus"}
-              </button>
-            )}
+            <button type="submit" className={isEdit ? "btn-update" : "btn-save"} disabled={loading}>
+              <i className={isEdit ? "bi bi-check2-circle" : "bi bi-gift-fill"} />
+              {loading ? (isEdit ? "Updating…" : "Saving…") : (isEdit ? "Update Bonus" : "Save Bonus")}
+            </button>
             <button type="button" className="btn-clear" onClick={handleClear}>
               <i className="bi bi-x-circle" /> Clear
             </button>
@@ -333,7 +329,6 @@ function Bonus() {
         </form>
       </div>
 
-      {/* ── Table card ── */}
       <div className="bonus-card">
         <div className="bonus-card-header" style={{ paddingBottom: "16px", borderBottom: "1px solid #f0f2f7" }}>
           <div className="card-icon green"><i className="bi bi-table" /></div>
@@ -363,7 +358,7 @@ function Bonus() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {loading && bonusList.length === 0 ? (
                 <tr className="loading-row">
                   <td colSpan="4">
                     <div className="spinner" />
@@ -395,7 +390,6 @@ function Bonus() {
           </table>
         </div>
       </div>
-
     </div>
   );
 }

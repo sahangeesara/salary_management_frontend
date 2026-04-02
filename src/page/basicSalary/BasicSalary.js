@@ -2,9 +2,11 @@ import React, { useState, useEffect, useCallback, memo } from "react";
 import BasicSalaryService from "../../service/BasicSalaryService";
 import "./basicsalry.css";
 
+// 1. Move static constants OUTSIDE the component so they are stable
+const EMPTY_FORM = { roleName: "", amount: "" };
+
 /* ── Memo-ised table row ── */
 const BasicSalaryRow = memo(({ basicSalary, index, onEdit, onDelete }) => {
-
   return (
     <tr style={{ animation: `fadeSlideIn 0.3s ease both`, animationDelay: `${index * 40}ms` }}>
       <td>
@@ -38,8 +40,7 @@ const BasicSalaryRow = memo(({ basicSalary, index, onEdit, onDelete }) => {
 });
 
 /* ── Delete confirmation modal ── */
-const DeleteModal = memo(({ basicSalary, onConfirm, onCancel,  }) => {
- 
+const DeleteModal = memo(({ basicSalary, onConfirm, onCancel }) => {
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="confirm-modal" onClick={(e) => e.stopPropagation()}>
@@ -47,7 +48,7 @@ const DeleteModal = memo(({ basicSalary, onConfirm, onCancel,  }) => {
           <i className="bi bi-exclamation-triangle-fill" />
         </div>
         <h5>Delete basicSalary?</h5>
-        <p>Are you sure you want to delete the basicSalary record forRole Name<strong>{basicSalary.roleName}</strong>? This action cannot be undone.</p>
+        <p>Are you sure you want to delete the record for <strong>{basicSalary.roleName}</strong>? This action cannot be undone.</p>
         <div className="confirm-actions">
           <button className="btn-cancel" onClick={onCancel}>Cancel</button>
           <button className="btn-confirm-delete" onClick={onConfirm}>
@@ -60,20 +61,33 @@ const DeleteModal = memo(({ basicSalary, onConfirm, onCancel,  }) => {
 });
 
 function BasicSalary() {
-  const EMPTY_FORM = { roleName: "", amount: "" };
-
-  const [basicSalaryList, setbasicSalaryList]       = useState([]);
-  const [form, setForm]                 = useState(EMPTY_FORM);
-  const [editingId, setEditingId]       = useState(null);
+  const [basicSalaryList, setbasicSalaryList] = useState([]);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [loading, setLoading]           = useState(false);
-  const [toast, setToast]               = useState(null);
-  const [search, setSearch]             = useState("");
+  const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [search, setSearch] = useState("");
+
+  // 2. Define showToast first
+  const showToast = useCallback((msg, type = "success") => setToast({ msg, type }), []);
+
+  // 3. Define fetchers with useCallback so they are stable
+  const fetchbasicSalaryList = useCallback(() => {
+    setLoading(true);
+    BasicSalaryService.getAllBasicSalary()
+      .then((data) => setbasicSalaryList(Array.isArray(data) ? data : []))
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Failed to load basic salaries", "error"); 
+      })
+      .finally(() => setLoading(false));
+  }, [showToast]);
 
   /* ── Load on mount ── */
   useEffect(() => {
     fetchbasicSalaryList();
-  }, []);
+  }, [fetchbasicSalaryList]); // Now safe to include
 
   /* ── Auto-dismiss toast ── */
   useEffect(() => {
@@ -81,19 +95,6 @@ function BasicSalary() {
     const t = setTimeout(() => setToast(null), 3000);
     return () => clearTimeout(t);
   }, [toast]);
-
-  const showToast = useCallback((msg, type = "success") => setToast({ msg, type }), []);
-
-  /* ── Fetch basicSalary list ── */
-  const fetchbasicSalaryList = useCallback(() => {
-    setLoading(true);
-    BasicSalaryService.getAllBasicSalary()
-      .then((data) => setbasicSalaryList(Array.isArray(data) ? data : []))
-      .catch((err) => { console.error(err); showToast("Failed to load basicSalaryes", "error"); })
-      .finally(() => setLoading(false));
-  }, [showToast]);
-
- 
 
   const handleChange = useCallback((e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -108,7 +109,7 @@ function BasicSalary() {
   const handleEdit = useCallback((basicSalary) => {
     setForm({
       roleName: String(basicSalary.roleName ?? ""),
-      amount:     String(basicSalary.amount     ?? ""),
+      amount: String(basicSalary.amount ?? ""),
     });
     setEditingId(basicSalary.id ?? basicSalary._id ?? basicSalary.basicSalaryId);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -127,10 +128,13 @@ function BasicSalary() {
     action
       .then(() => {
         fetchbasicSalaryList();
-        showToast(editingId ? "basicSalary updated!" : "basicSalary created!");
+        showToast(editingId ? "Salary updated!" : "Salary created!");
         handleClear();
       })
-      .catch((err) => { console.error(err); showToast("Operation failed", "error"); })
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Operation failed", "error"); 
+      })
       .finally(() => setLoading(false));
   }, [form, editingId, fetchbasicSalaryList, showToast, handleClear]);
 
@@ -139,14 +143,20 @@ function BasicSalary() {
     if (!deleteTarget) return;
     const id = deleteTarget.id ?? deleteTarget._id ?? deleteTarget.basicSalaryId;
     BasicSalaryService.deletebasicSalary(id)
-      .then(() => { fetchbasicSalaryList(); showToast("basicSalary deleted"); })
-      .catch((err) => { console.error(err); showToast("Delete failed", "error"); })
+      .then(() => { 
+        fetchbasicSalaryList(); 
+        showToast("Salary record deleted"); 
+      })
+      .catch((err) => { 
+        console.error(err); 
+        showToast("Delete failed", "error"); 
+      })
       .finally(() => setDeleteTarget(null));
   }, [deleteTarget, fetchbasicSalaryList, showToast]);
 
   /* ── Filtered list ── */
   const filtered = basicSalaryList.filter((b) => {
-    const q   = search.toLowerCase();
+    const q = search.toLowerCase();
     return (
       String(b.roleName).toLowerCase().includes(q) ||
       String(b.amount).includes(q)
@@ -154,11 +164,9 @@ function BasicSalary() {
   });
 
   const isEdit = editingId !== null;
- 
 
   return (
     <div className="basicSalary-page">
-
       {/* ── Toast ── */}
       {toast && (
         <div className={`toast-bar ${toast.type}`}>
@@ -184,19 +192,17 @@ function BasicSalary() {
             Basic Salary Management
           </h2>
         </div>
-        <span className="basicSalary-count">{basicSalaryList.length} basicSalary{basicSalaryList.length !== 1 ? "es" : ""}</span>
+        <span className="basicSalary-count">{basicSalaryList.length} record{basicSalaryList.length !== 1 ? "s" : ""}</span>
       </div>
 
       {/* ── Form card ── */}
       <div className="basicSalary-card">
         <div className="basicSalary-card-header">
-          <div className="card-icon blue">
-            <i className="bi bi-cash-coin" />
-          </div>
+          <div className="card-icon blue"><i className="bi bi-cash-coin" /></div>
           <div>
-            <div className="card-title">{isEdit ? "Edit basicSalary" : "Add New basicSalary"}</div>
+            <div className="card-title">{isEdit ? "Edit Basic Salary" : "Add New Basic Salary"}</div>
             <div className="card-subtitle">
-              {isEdit ? "Update the basicSalary information" : "Fill in the details below"}
+              {isEdit ? "Update role and amount details" : "Define a new base salary for a role"}
             </div>
           </div>
           <span className={`mode-tag ${isEdit ? "edit" : "create"}`}>
@@ -207,7 +213,6 @@ function BasicSalary() {
 
         <form className="basicSalary-form-body" onSubmit={handleSubmit}>
           <div className="row g-3">
-
             <div className="col-md-6">  
               <label className="form-label-sm">Employee Role</label>
               <input
@@ -221,9 +226,8 @@ function BasicSalary() {
               />
             </div>
 
-            {/* ── Amount ── */}
             <div className="col-md-6">
-              <label className="form-label-sm">basicSalary Amount</label>
+              <label className="form-label-sm">Basic Salary Amount</label>
               <div className="amount-wrap">
                 <input
                   type="number"
@@ -238,21 +242,13 @@ function BasicSalary() {
                 />
               </div>
             </div>
-
           </div>
 
           <div className="form-actions">
-            {isEdit ? (
-              <button type="submit" className="btn-update" disabled={loading}>
-                <i className="bi bi-check2-circle" />
-                {loading ? "Updating…" : "Update basicSalary"}
-              </button>
-            ) : (
-              <button type="submit" className="btn-save" disabled={loading}>
-                <i className="bi bi-cash-coinl" />
-                {loading ? "Saving…" : "Save basicSalary"}
-              </button>
-            )}
+            <button type="submit" className={isEdit ? "btn-update" : "btn-save"} disabled={loading}>
+              <i className={isEdit ? "bi bi-check2-circle" : "bi bi-cash-coin"} />
+              {loading ? "Processing…" : isEdit ? "Update Record" : "Save Record"}
+            </button>
             <button type="button" className="btn-clear" onClick={handleClear}>
               <i className="bi bi-x-circle" /> Clear
             </button>
@@ -265,14 +261,14 @@ function BasicSalary() {
         <div className="basicSalary-card-header" style={{ paddingBottom: "16px", borderBottom: "1px solid #f0f2f7" }}>
           <div className="card-icon green"><i className="bi bi-table" /></div>
           <div>
-            <div className="card-title">basicSalary List</div>
-            <div className="card-subtitle">Manage all registered basicSalaryes</div>
+            <div className="card-title">Salary List</div>
+            <div className="card-subtitle">Manage base pay per role</div>
           </div>
           <div className="search-wrap ms-auto">
             <i className="bi bi-search" />
             <input
               className="search-input"
-              placeholder="Search by name or amount…"
+              placeholder="Search by role or amount…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -290,19 +286,19 @@ function BasicSalary() {
               </tr>
             </thead>
             <tbody>
-              {loading ? (
+              {loading && basicSalaryList.length === 0 ? (
                 <tr className="loading-row">
                   <td colSpan="4">
                     <div className="spinner" />
-                    Loading basicSalaryes…
+                    Loading records…
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan="4">
                     <div className="basicSalaryty-state">
-                      <div className="basicSalaryty-icon"><i className="bi bi-gift" /></div>
-                      <div>{search ? "No results found" : "No basicSalaryes yet"}</div>
+                      <div className="basicSalaryty-icon"><i className="bi bi-cash-stack" /></div>
+                      <div>{search ? "No matches found" : "No salary records found"}</div>
                     </div>
                   </td>
                 </tr>
@@ -321,7 +317,6 @@ function BasicSalary() {
           </table>
         </div>
       </div>
-
     </div>
   );
 }
