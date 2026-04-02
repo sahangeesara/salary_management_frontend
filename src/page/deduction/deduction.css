@@ -122,3 +122,89 @@
 .spin-icon { display:inline-block; animation:spin 0.8s linear infinite; }
 .deductionty-state { text-align:center; padding:48px 0; color:#9ca3af; }
 .deductionty-icon { font-size:36px; margin-bottom:10px; opacity:0.4; }
+
+
+
+/* ── Responsive Design for Deduction Page ── */
+
+/* Tablet & Smaller Screens (under 1024px) */
+@media (max-width: 1024px) {
+    .deduction-page {
+        padding: 20px;
+    }
+
+    /* Enable horizontal scroll for the table without breaking page width */
+    .deduction-table-wrap {
+        border: 1px solid #e8ecf2;
+        border-radius: 12px;
+    }
+}
+
+/* Mobile Devices (under 768px) */
+@media (max-width: 768px) {
+    .deduction-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .deduction-header h2 {
+        font-size: 22px;
+    }
+
+    /* Form Body Adjustments */
+    .deduction-form-body {
+        padding: 16px;
+    }
+
+    /* Stack buttons for easier tapping */
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn-save, .btn-update, .btn-clear {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+    }
+
+    /* Expand search bar to full width */
+    .search-wrap {
+        max-width: 100%;
+        margin-top: 10px;
+    }
+
+    /* Reduce table cell density for small screens */
+    .deduction-table thead th,
+    .deduction-table tbody td {
+        padding: 10px 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .deduction-header h2 {
+        font-size: 20px;
+    }
+
+    .emp-chip {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .confirm-modal {
+        padding: 24px 20px;
+    }
+
+    /* Keep action icons visible but compact */
+    .action-group {
+        gap: 4px;
+    }
+}
+
+.deduction-avatar, 
+.emp-chip-avatar, 
+.card-icon, 
+.action-btn {
+    flex-shrink: 0; /* Prevents icons from squishing on small screens */
+}

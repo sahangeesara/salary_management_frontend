@@ -248,3 +248,75 @@
   .dash-page { padding: 16px 12px 40px; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Interactive Polish ── */
+
+/* Hover effect for data rows across the dashboard */
+.comp-row, .hbar-row, .leave-stat-row, .quick-row {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.comp-row:hover {
+    background: rgba(79, 142, 247, 0.05);
+    padding-left: 4px;
+    border-radius: 4px;
+}
+
+/* Tooltip-like effect for stat cards */
+.stat-card:active {
+    transform: scale(0.98);
+}
+
+/* ── Typography & Data Sharpness ── */
+
+/* Ensuring money values always align perfectly */
+.comp-val, .emp-list-salary, .net-hero-val, .stat-value {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.5px;
+}
+
+/* ── Mobile Layout Refinements ── */
+
+@media (max-width: 768px) {
+    /* Stack the top bar vertically on small screens */
+    .dash-topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .dash-topbar-right {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    /* Make stat cards slightly more compact on mobile */
+    .stat-card {
+        padding: 16px 16px 12px;
+    }
+    
+    .stat-value {
+        font-size: 22px;
+    }
+}
+
+/* ── Animation Delay for Grid Items ── */
+/* This creates a "staggered" entrance effect when the page loads */
+.stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stat-card:nth-child(2) { animation-delay: 0.10s; }
+.stat-card:nth-child(3) { animation-delay: 0.15s; }
+.stat-card:nth-child(4) { animation-delay: 0.20s; }
+
+.dash-card:nth-child(1) { animation-delay: 0.25s; }
+.dash-card:nth-child(2) { animation-delay: 0.30s; }
+
+/* ── Scrollbar Polish for internal lists ── */
+.emp-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.emp-list::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 10px;
+}

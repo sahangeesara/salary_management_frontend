@@ -129,3 +129,105 @@
 .spin-icon { display:inline-block; animation:spin 0.8s linear infinite; }
 .overtime-empty-state { text-align:center; padding:48px 0; color:#9ca3af; }
 .overtime-empty-icon  { font-size:36px; margin-bottom:10px; opacity:0.4; }
+
+
+/* ── Responsive Design for Overtime Page ── */
+
+/* Tablet & Smaller Screens (under 1024px) */
+@media (max-width: 1024px) {
+    .overtime-page {
+        padding: 20px;
+    }
+
+    .overtime-table-wrap {
+        border: 1px solid #e8ecf2;
+        border-radius: 12px;
+        background: #fff;
+    }
+}
+
+/* Mobile Devices (under 768px) */
+@media (max-width: 768px) {
+    .overtime-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .overtime-header h2 {
+        font-size: 22px;
+    }
+
+    .overtime-form-body {
+        padding: 16px;
+    }
+
+    /* Stack buttons for mobile touch targets */
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn-save, .btn-update, .btn-clear {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+    }
+
+    /* Make search bar take full width */
+    .search-wrap {
+        max-width: 100%;
+        margin-top: 10px;
+    }
+
+    /* Keep table cells readable but compact */
+    .overtime-table thead th,
+    .overtime-table tbody td {
+        padding: 10px 14px;
+    }
+    
+    /* Ensure the total badge looks good on small screens */
+    .total-badge {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Small Mobile (under 480px) */
+@media (max-width: 480px) {
+    .overtime-header h2 {
+        font-size: 20px;
+    }
+
+    .confirm-modal {
+        padding: 24px 20px;
+        width: 95%;
+    }
+    
+    .action-btn {
+        width: 38px;
+        height: 38px;
+    }
+    
+    /* Adjust prefix font-size if input gets too narrow */
+    .amount-prefix {
+        font-size: 10px;
+        left: 6px;
+    }
+    
+    .amount-input {
+        padding-left: 38px !important;
+    }
+}
+
+/* ── UI Stability ── */
+.overtime-avatar, 
+.emp-chip-avatar, 
+.card-icon, 
+.action-btn,
+.spinner,
+.hours-pill,
+.rate-pill,
+.total-pill {
+    flex-shrink: 0; /* Prevents icons and status pills from distorting */
+}
+

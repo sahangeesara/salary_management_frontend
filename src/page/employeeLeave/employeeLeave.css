@@ -122,3 +122,93 @@
 .spin-icon { display:inline-block; animation:spin 0.8s linear infinite; }
 .employeeLeavety-state { text-align:center; padding:48px 0; color:#9ca3af; }
 .employeeLeavety-icon { font-size:36px; margin-bottom:10px; opacity:0.4; }
+
+
+
+/* ── Responsive Design for Employee Leave Page ── */
+
+/* Tablet & Smaller Screens (under 1024px) */
+@media (max-width: 1024px) {
+    .employeeLeave-page {
+        padding: 20px;
+    }
+
+    /* Standard table wrap for horizontal scrolling */
+    .employeeLeave-table-wrap {
+        border: 1px solid #e8ecf2;
+        border-radius: 12px;
+        background: #fff;
+    }
+}
+
+/* Mobile Devices (under 768px) */
+@media (max-width: 768px) {
+    .employeeLeave-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .employeeLeave-header h2 {
+        font-size: 22px;
+    }
+
+    .employeeLeave-form-body {
+        padding: 16px;
+    }
+
+    /* Stack buttons for mobile tap-friendliness */
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn-save, .btn-update, .btn-clear {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+    }
+
+    /* Ensure search bar doesn't feel cramped */
+    .search-wrap {
+        max-width: 100%;
+        margin-top: 10px;
+    }
+
+    /* Mobile cell padding adjustment */
+    .employeeLeave-table thead th,
+    .employeeLeave-table tbody td {
+        padding: 10px 14px;
+    }
+}
+
+/* Small Mobile (under 480px) */
+@media (max-width: 480px) {
+    .employeeLeave-header h2 {
+        font-size: 20px;
+    }
+
+    /* Stack employee chip elements horizontally to save vertical space if needed */
+    .emp-chip {
+        flex-wrap: wrap;
+    }
+
+    .confirm-modal {
+        padding: 24px 20px;
+        width: 95%;
+    }
+    
+    /* Slightly larger action buttons for small touchscreens */
+    .action-btn {
+        width: 38px;
+        height: 38px;
+    }
+}
+
+/* ── Prevent Layout Shift & Icon Distortion ── */
+.employeeLeave-avatar, 
+.emp-chip-avatar, 
+.card-icon, 
+.action-btn,
+.spinner {
+    flex-shrink: 0;
+}

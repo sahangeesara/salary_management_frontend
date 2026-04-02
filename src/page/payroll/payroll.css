@@ -129,3 +129,101 @@
 .spin-icon { display:inline-block; animation:spin 0.8s linear infinite; }
 .payroll-empty-state { text-align:center; padding:48px 0; color:#9ca3af; }
 .payroll-empty-icon  { font-size:36px; margin-bottom:10px; opacity:0.4; }
+
+
+/* ── Responsive Design for Payroll Processing ── */
+
+/* Tablet & Smaller Screens (under 1024px) */
+@media (max-width: 1024px) {
+    .payroll-page {
+        padding: 20px;
+    }
+
+    /* Wrap the table to allow side-scrolling for complex salary breakdowns */
+    .payroll-table-wrap {
+        border: 1px solid #e8ecf2;
+        border-radius: 12px;
+        background: #fff;
+    }
+}
+
+/* Mobile Devices (under 768px) */
+@media (max-width: 768px) {
+    .payroll-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .payroll-header h2 {
+        font-size: 22px;
+    }
+
+    .payroll-form-body {
+        padding: 16px;
+    }
+
+    /* Stack buttons for easy mobile processing */
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .btn-save, .btn-update, .btn-clear {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+    }
+
+    /* Full-width search for mobile users */
+    .search-wrap {
+        max-width: 100%;
+        margin-top: 10px;
+    }
+
+    /* Adjust table padding for smaller viewports */
+    .payroll-table thead th,
+    .payroll-table tbody td {
+        padding: 10px 14px;
+    }
+    
+    /* Center the total badge for mobile ergonomics */
+    .total-badge {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Small Mobile (under 480px) */
+@media (max-width: 480px) {
+    .payroll-header h2 {
+        font-size: 20px;
+    }
+
+    .confirm-modal {
+        padding: 24px 20px;
+        width: 95%;
+    }
+    
+    .action-btn {
+        width: 38px;
+        height: 38px;
+    }
+    
+    /* Ensure currency prefix doesn't crowd small inputs */
+    .amount-prefix {
+        font-size: 10px;
+        left: 6px;
+    }
+}
+
+/* ── Element Integrity ── */
+.payroll-avatar, 
+.emp-chip-avatar, 
+.card-icon, 
+.action-btn,
+.spinner,
+.hours-pill,
+.rate-pill,
+.total-pill {
+    flex-shrink: 0; /* Ensures critical icons/status pills don't collapse */
+}

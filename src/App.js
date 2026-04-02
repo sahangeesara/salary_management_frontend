@@ -12,39 +12,30 @@ import Overtime from './page/overtime/Overtime';
 import Deduction from './page/deduction/Deduction';
 import EmployeeLeave from './page/employeeLeave/EmployeeLeave';
 import PayrollConfig from './page/payrollConfig/PayrollConfig';
-// import SalaryRequest from './page/salaryRequest/SalaryRequest';
-// import SalaryResponse from './page/salaryResponse/SalaryResponse';
 import User from './page/user/User';
 import Payroll from './page/payroll/Payroll';
 import BasicSalary from './page/basicSalary/BasicSalary';
+
 function App() {
   return (
     <Router>
-      <div className="d-flex">
-        
-        <Sidebar />
-
-        <div className="flex-grow-1 p-4">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/employees" element={<Employee />} />
-            <Route path="/payroll" element={<Payroll />} />
-            <Route path="/allowance" element={<Allowance />} />
-            <Route path="/basic-salary" element={<BasicSalary />} />
-            <Route path="/bonus" element={<Bonus />} />
-            <Route path="/overtime" element={<Overtime />} />
-            <Route path="/deduction" element={<Deduction />} />
-            <Route path="/leave" element={<EmployeeLeave />} />
-            <Route path="/payroll-config" element={<PayrollConfig />} />
-            {/* <Route path="/salary-request" element={<SalaryRequest />} />
-            <Route path="/salary-response" element={<SalaryResponse />} /> */}
-            <Route path="/users" element={<User />} />
-          </Routes>
-        </div>
-
+      <Sidebar />
+      <div className="main-content">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/employees" element={<Employee />} />
+          <Route path="/payroll" element={<Payroll />} />
+          <Route path="/allowance" element={<Allowance />} />
+          <Route path="/basic-salary" element={<BasicSalary />} />
+          <Route path="/bonus" element={<Bonus />} />
+          <Route path="/overtime" element={<Overtime />} />
+          <Route path="/deduction" element={<Deduction />} />
+          <Route path="/leave" element={<EmployeeLeave />} />
+          <Route path="/payroll-config" element={<PayrollConfig />} />
+          <Route path="/users" element={<User />} />
+        </Routes>
       </div>
     </Router>
-
   );
 }
 
