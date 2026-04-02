@@ -147,7 +147,7 @@ export default function OvertimePage() {
   useEffect(() => { 
     fetchRecords(); 
     fetchEmployees(); 
-  }, [fetchRecords, fetchEmployees]); // Fixes 'exhaustive-deps'
+  }, [fetchRecords, fetchEmployees]);
 
   const handleChange = useCallback((e) => {
     const { name, value } = e.target;
