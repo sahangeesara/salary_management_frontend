@@ -13,12 +13,7 @@ const EMPTY_FORM = {
   enabled: true,
 };
 
-/**
- * ✅ BULLETPROOF BOOLEAN HELPER
- * This handles: true, 1, "1", "true" -> all become TRUE
- */
 const isUserEnabled = (val) => {
-  console.log("Checking enabled value:", val, typeof val); // Debug log to see the actual value and type
   if (val === true || val === 1 || String(val).toLowerCase() === "true" || String(val) === "1") {
     return true;
   }
@@ -27,7 +22,6 @@ const isUserEnabled = (val) => {
 
 // ── Row Component ─────────────────────────────────────────────────────────
 const UserRow = memo(({ user, index, onEdit, onDelete }) => {
-  // Use the helper to determine the status badge color and text
   const active = isUserEnabled(user.enabled);
 
   return (
@@ -44,19 +38,20 @@ const UserRow = memo(({ user, index, onEdit, onDelete }) => {
       </td>
       <td><span className="emp-meta">{user.email}</span></td>
       <td><span className="salary-pill">{user.role?.replace("ROLE_", "")}</span></td>
-      
-    
       <td>
         <span className={`status-badge ${active ? "status-active" : "status-inactive"}`}>
           <span className="status-dot" />
           {active ? "ENABLED" : "DISABLED"}
         </span>
       </td>
-
       <td>
         <div className="action-group">
-          <button className="action-btn edit-btn" onClick={() => onEdit(user)}><i className="bi bi-pencil-fill" /></button>
-          <button className="action-btn delete-btn" onClick={() => onDelete(user)}><i className="bi bi-trash3-fill" /></button>
+          <button className="action-btn edit-btn" onClick={() => onEdit(user)} title="Edit">
+            <i className="bi bi-pencil-fill" />
+          </button>
+          <button className="action-btn delete-btn" onClick={() => onDelete(user.id)} title="Delete">
+            <i className="bi bi-trash3-fill" />
+          </button>
         </div>
       </td>
     </tr>
@@ -68,19 +63,19 @@ function User() {
   const [users, setUsers] = useState([]);
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Now utilized
   const [toast, setToast] = useState(null);
   const [search, setSearch] = useState("");
 
-  const showToast = useCallback((msg, type = "success") => setToast({ msg, type }), []);
+  const showToast = useCallback((msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000); // Auto-hide toast
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
       const data = await UserService.getAllUsers();
-      // Debug: Check your console to see exactly what 'enabled' looks like
-      console.log("Raw User Data from API:", data); 
       setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       showToast("Failed to load users", "error");
@@ -102,11 +97,26 @@ function User() {
       email: user.email || "",
       password: "", 
       role: user.role || "ROLE_USER",
-      enabled: isUserEnabled(user.enabled), // Convert DB 1/0 to JS true/false
+      enabled: isUserEnabled(user.enabled),
     });
     setEditingId(user.id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  const handleDelete = async (id) => {
+    if (window.confirm("Are you sure you want to delete this user?")) {
+      setLoading(true);
+      try {
+        await UserService.deleteUser(id);
+        showToast("User deleted successfully");
+        fetchUsers();
+      } catch (err) {
+        showToast("Failed to delete user", "error");
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -117,7 +127,8 @@ function User() {
     try {
       if (editingId) await UserService.updateUser(payload);
       else await UserService.createUser(payload);
-      showToast("Success!");
+      
+      showToast(editingId ? "User updated!" : "User created!");
       setForm(EMPTY_FORM);
       setEditingId(null);
       fetchUsers();
@@ -129,9 +140,10 @@ function User() {
   };
 
   const filteredUsers = useMemo(() => {
+    const s = search.toLowerCase();
     return users.filter(u => 
-      u.username?.toLowerCase().includes(search.toLowerCase()) || 
-      u.email?.toLowerCase().includes(search.toLowerCase())
+      u.username?.toLowerCase().includes(s) || 
+      u.email?.toLowerCase().includes(s)
     );
   }, [users, search]);
 
@@ -140,54 +152,82 @@ function User() {
       {toast && <div className={`toast-bar ${toast.type}`}>{toast.msg}</div>}
 
       <div className="emp-header">
-        <h2>User Management</h2>
-        <span className="emp-count">{users.length} Users Found</span>
+        <div>
+          <h2>User Management</h2>
+          <span className="emp-count">{users.length} Users Found</span>
+        </div>
+        {loading && <div className="spinner-border text-primary" role="status" />}
       </div>
 
-      {/* Input Form */}
       <div className="emp-card">
         <form className="emp-form-body" onSubmit={handleSubmit}>
           <div className="row g-3">
             <div className="col-md-4">
               <label>Username</label>
-              <input name="username" className="emp-input" value={form.username} onChange={handleChange} required />
+              <input name="username" className="emp-input" value={form.username} onChange={handleChange} required disabled={loading} />
             </div>
             <div className="col-md-4">
               <label>Email</label>
-              <input name="email" type="email" className="emp-input" value={form.email} onChange={handleChange} required />
+              <input name="email" type="email" className="emp-input" value={form.email} onChange={handleChange} required disabled={loading} />
             </div>
+            {!editingId && (
+              <div className="col-md-4">
+                <label>Password</label>
+                <input name="password" type="password" className="emp-input" value={form.password} onChange={handleChange} required disabled={loading} />
+              </div>
+            )}
             <div className="col-md-4">
               <label>Role</label>
-              <select name="role" className="emp-input" value={form.role} onChange={handleChange}>
+              <select name="role" className="emp-input" value={form.role} onChange={handleChange} disabled={loading}>
                 {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
-            <div className="col-md-4">
-              <label className="d-flex align-items-center gap-2 mt-2">
-                <input type="checkbox" name="enabled" checked={form.enabled} onChange={handleChange} />
+            <div className="col-md-4 d-flex align-items-end">
+              <label className="d-flex align-items-center gap-2 mb-2">
+                <input type="checkbox" name="enabled" checked={form.enabled} onChange={handleChange} disabled={loading} />
                 <b>Account Enabled</b>
               </label>
             </div>
           </div>
           <div className="form-actions mt-3">
-            <button type="submit" className="btn-save">{editingId ? "Update" : "Save"}</button>
-            <button type="button" className="btn-clear" onClick={() => {setForm(EMPTY_FORM); setEditingId(null);}}>Clear</button>
+            <button type="submit" className="btn-save" disabled={loading}>
+              {loading ? "Processing..." : editingId ? "Update User" : "Save User"}
+            </button>
+            <button type="button" className="btn-clear" onClick={() => {setForm(EMPTY_FORM); setEditingId(null);}} disabled={loading}>
+              Clear
+            </button>
           </div>
         </form>
       </div>
 
-      {/* User Table */}
       <div className="emp-card mt-4">
-        <div className="p-3"><input className="search-input" placeholder="Search users..." onChange={e => setSearch(e.target.value)} /></div>
+        <div className="p-3">
+          <input 
+            className="search-input" 
+            placeholder="Search by name or email..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+          />
+        </div>
         <div className="emp-table-wrap">
           <table className="emp-table">
             <thead>
               <tr><th>#</th><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
-              {filteredUsers.map((u, i) => (
-                <UserRow key={u.id} user={u} index={i} onEdit={handleEdit} onDelete={(user) => fetchUsers()} />
-              ))}
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((u, i) => (
+                  <UserRow 
+                    key={u.id} 
+                    user={u} 
+                    index={i} 
+                    onEdit={handleEdit} 
+                    onDelete={handleDelete} 
+                  />
+                ))
+              ) : (
+                <tr><td colSpan="6" className="text-center p-4">No users found.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
