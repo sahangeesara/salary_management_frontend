@@ -50,7 +50,7 @@ const Sidebar = () => {
     <>
       {/* Mobile Top Nav (Visible < 992px) */}
       <nav className="mobile-top-nav">
-        <div className="nav-brand">Sahan</div>
+        <div className="nav-brand"> Employee Payroll Management</div>
         <button className={`nav-toggle ${isMobileOpen ? 'open' : ''}`} onClick={() => setIsMobileOpen(!isMobileOpen)}>
           <span></span><span></span><span></span>
         </button>
@@ -65,7 +65,7 @@ const Sidebar = () => {
           <div className="brand-logo"><i className="bi bi-currency-dollar" /></div>
           <div className="brand-text">
             <span className="title">PayrollPro</span>
-            <span className="subtitle">Sahan Management</span>
+            <span className="subtitle">Employee Payroll Management</span>
           </div>
           <button className="collapse-toggle" onClick={() => setCollapsed(!collapsed)}>
             <i className={`bi ${collapsed ? "bi-chevron-right" : "bi-chevron-left"}`} />
