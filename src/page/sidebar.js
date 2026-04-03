@@ -48,9 +48,9 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile Top Nav (Visible < 992px) */}
+     
       <nav className="mobile-top-nav">
-        <div className="nav-brand"> Employee Payroll Management</div>
+        <div className="nav-brand"> PayrollPro</div>
         <button className={`nav-toggle ${isMobileOpen ? 'open' : ''}`} onClick={() => setIsMobileOpen(!isMobileOpen)}>
           <span></span><span></span><span></span>
         </button>
