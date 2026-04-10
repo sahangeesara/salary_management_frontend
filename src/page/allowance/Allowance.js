@@ -3,6 +3,16 @@ import AllowanceService from "../../service/AllowanceService";
 import EmployeeService from "../../service/EmployeeService";
 import "./allowance.css";
 
+
+/* ── Utility to safely render department/designation as string ── */
+export function getName(val) {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object" && val.name) return val.name;
+  return String(val);
+}
+
+
 /* ── Static Constants ── */
 const ALLOWANCE_TYPES = ["Transport", "Meal", "Housing", "Medical", "Other"];
 
@@ -36,7 +46,7 @@ const AllowanceRow = memo(({ allowance, index, onEdit, onDelete, employees }) =>
           <div className="allowance-avatar">{initials.toUpperCase()}</div>
           <div>
             <div className="allowance-fullname">{empName}</div>
-            <div className="allowance-dept-tag">{emp?.department || ""}</div>
+            <div className="allowance-dept-tag">{getName(emp?.department.name)}</div>
           </div>
         </div>
       </td>
@@ -264,7 +274,7 @@ function Allowance() {
                   const id = emp.id ?? emp._id ?? emp.employeeId;
                   return (
                     <option key={id} value={id}>
-                      {emp.firstName} {emp.lastName} {emp.department ? ` · ${emp.department}` : ""}
+                      {emp.firstName} {emp.lastName}{emp.department ? ` · ${getName(emp.department)}` : ""}
                     </option>
                   );
                 })}
@@ -276,7 +286,7 @@ function Allowance() {
                   </div>
                   <div>
                     <div className="emp-chip-name">{selectedEmp.firstName} {selectedEmp.lastName}</div>
-                    <div className="emp-chip-meta">{selectedEmp.designation || selectedEmp.department || ""}</div>
+                    <div className="emp-chip-meta">{getName(selectedEmp.designation) || getName(selectedEmp.department) || ""}</div>
                   </div>
                 </div>
               )}

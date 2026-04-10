@@ -1,7 +1,15 @@
+
 import React, { useState, useEffect, useCallback, memo, useMemo } from "react";
 import DeductionService from "../../service/DeductionService";
 import EmployeeService from "../../service/EmployeeService";
 import "./deduction.css";
+// Utility to safely render department/designation as string
+function getName(val) {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object" && val.name) return val.name;
+  return String(val);
+}
 
 const DEDUCTION_TYPES = ["Tax", "Loan", "Donation"];
 const EMPTY_FORM = { employeeId: "", type: "", amount: "" };
@@ -11,7 +19,6 @@ const DeductionRow = memo(({ deduction, index, onEdit, onDelete, employees }) =>
   const emp = employees.find(
     (e) => String(e.id ?? e._id ?? e.employeeId) === String(deduction.employeeId)
   );
-  
   const empName = emp ? `${emp.firstName} ${emp.lastName}` : `ID: ${deduction.employeeId}`;
   const initials = emp
     ? `${emp.firstName?.[0] ?? ""}${emp.lastName?.[0] ?? ""}`
@@ -33,7 +40,7 @@ const DeductionRow = memo(({ deduction, index, onEdit, onDelete, employees }) =>
           <div className="deduction-avatar">{initials.toUpperCase()}</div>
           <div>
             <div className="deduction-fullname">{empName}</div>
-            <div className="deduction-dept-tag">{emp?.department || "N/A"}</div>
+            <div className="deduction-dept-tag">{getName(emp?.department) || "N/A"}</div>
           </div>
         </div>
       </td>
@@ -252,7 +259,7 @@ function Deduction() {
                   </div>
                   <div>
                     <div className="emp-chip-name">{selectedEmp.firstName} {selectedEmp.lastName}</div>
-                    <div className="emp-chip-meta">{selectedEmp.designation}</div>
+                    <div className="emp-chip-meta">{selectedEmp.designation?.name || selectedEmp.designation || ""}</div>
                   </div>
                 </div>
               )}
@@ -369,3 +376,4 @@ function Deduction() {
 }
 
 export default Deduction;
+

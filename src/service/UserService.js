@@ -48,6 +48,15 @@ class UserService {
       return res;
     });
   }
+
+  // Get user by ID
+  getUserById(id) {
+    return fetch(`http://localhost:8080/api/users/${id}`)
+      .then(res => {
+        if (!res.ok) throw new Error(`Server error: ${res.status}`);
+        return res.json();
+      });
+  }
 }
 
 const userService = new UserService();

@@ -4,6 +4,16 @@ import OvertimeService from "../../service/OvertimeService ";
 import EmployeeService from "../../service/EmployeeService";
 import "./overtime.css";
 
+// Utility to safely render department/designation as string
+
+
+function getName(val) {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object" && val.name) return val.name;
+  return String(val);
+}
+
 /* ── 1. Static Helpers & Constants (Defined outside to be stable) ── */
 const fmt = (n) =>
   Number(n || 0).toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -44,7 +54,7 @@ const OvertimeRow = memo(({ rec, index, employees, onEdit, onDelete }) => {
     (e) => String(e.id ?? e._id ?? e.employeeId) === String(rec.employeeId)
   );
   const empName  = emp ? `${emp.firstName} ${emp.lastName}` : `EMP #${rec.employeeId}`;
-  const dept     = emp?.department || emp?.dept || "—";
+  const dept     = getName(emp?.department) || getName(emp?.dept) || "—";
   const initials = emp
     ? `${emp.firstName?.[0] ?? ""}${emp.lastName?.[0] ?? ""}`.toUpperCase()
     : `E${String(rec.employeeId).padStart(2, "0")}`;
@@ -297,7 +307,7 @@ export default function OvertimePage() {
                 <option value="">— Select Employee —</option>
                 {employees.map((emp) => {
                   const id   = emp.id ?? emp._id ?? emp.employeeId;
-                  const dept = emp.department || emp.dept || "";
+                  const dept = getName(emp.department) || getName(emp.dept) || "";
                   return (
                     <option key={id} value={id}>
                       {emp.firstName} {emp.lastName}{dept ? ` · ${dept}` : ""}
@@ -312,7 +322,7 @@ export default function OvertimePage() {
                   </div>
                   <div>
                     <div className="emp-chip-name">{selectedEmp.firstName} {selectedEmp.lastName}</div>
-                    <div className="emp-chip-meta">{selectedEmp.designation || selectedEmp.department || selectedEmp.dept || ""}</div>
+                    <div className="emp-chip-meta">{getName(selectedEmp.designation) || getName(selectedEmp.department) || getName(selectedEmp.dept) || ""}</div>
                   </div>
                 </div>
               )}

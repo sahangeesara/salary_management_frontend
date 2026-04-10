@@ -15,25 +15,29 @@ import PayrollConfig from './page/payrollConfig/PayrollConfig';
 import User from './page/user/User';
 import Payroll from './page/payroll/Payroll';
 import BasicSalary from './page/basicSalary/BasicSalary';
+import Department from './page/department/Department';
+import Designation from "./page/designation/Designation";
 
 function App() {
   return (
     <Router>
       <Sidebar />
       <div className="main-content">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/employees" element={<Employee />} />
-          <Route path="/payroll" element={<Payroll />} />
-          <Route path="/allowance" element={<Allowance />} />
-          <Route path="/basic-salary" element={<BasicSalary />} />
-          <Route path="/bonus" element={<Bonus />} />
-          <Route path="/overtime" element={<Overtime />} />
-          <Route path="/deduction" element={<Deduction />} />
-          <Route path="/leave" element={<EmployeeLeave />} />
-          <Route path="/payroll-config" element={<PayrollConfig />} />
-          <Route path="/users" element={<User />} />
-        </Routes>
+         <Routes>
+           <Route path="/" element={<Dashboard />} />
+           <Route path="/employees" element={<Employee />} />
+           <Route path="/payroll" element={<Payroll />} />
+           <Route path="/allowance" element={<Allowance />} />
+           <Route path="/basic-salary" element={<BasicSalary />} />
+           <Route path="/bonus" element={<Bonus />} />
+           <Route path="/overtime" element={<Overtime />} />
+           <Route path="/deduction" element={<Deduction />} />
+           <Route path="/leave" element={<EmployeeLeave />} />
+           <Route path="/payroll-config" element={<PayrollConfig />} />
+           <Route path="/users" element={<User />} />
+           <Route path="/department" element={<Department />} />
+           <Route path="/designation" element={<Designation />} />
+         </Routes>
       </div>
     </Router>
   );

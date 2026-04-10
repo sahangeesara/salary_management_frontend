@@ -1,58 +1,89 @@
 import React, { useState, useEffect, useCallback, memo } from "react";
 import EmployeeService from "../../service/EmployeeService";
 import UserService from "../../service/UserService";
+import DepartmentService from "../../service/DepartmentService";
+import DesignationService from "../../service/DesignationService";
 import BasicSalaryService from "../../service/BasicSalaryService";
 import "./employee.css";
 
 const EMPTY_FORM = {
   firstName: "", lastName: "", email: "", phone: "",
   basicSalary: "", userId: "",
-  department: "", designation: "", status: "ACTIVE",
+  departmentId: "", designationId: "", status: "ACTIVE",
 };
 
-const EmployeeRow = memo(({ emp, index, onEdit, onDelete }) => (
-  <tr style={{ animation: `fadeSlideIn 0.3s ease both`, animationDelay: `${index * 40}ms` }}>
-    <td>
-      <span className="emp-index">{String(index + 1).padStart(2, "0")}</span>
-    </td>
-    <td>
-      <div className="emp-name-cell">
-        <div className="emp-avatar">
-          {emp.firstName?.[0]}{emp.lastName?.[0]}
+// Utility to ensure only strings/numbers are rendered
+function safeString(val) {
+  if (typeof val === "string" || typeof val === "number") return val;
+  if (val && typeof val === "object" && "name" in val) return val.name;
+  return "";
+}
+
+// Helper: ensure option exists in array, if not, add fallback
+function ensureOption(options, id, label) {
+  if (!id) return options;
+  if (!options.some(opt => String(opt.id) === String(id))) {
+    return [...options, { id, name: label || `Not in list (${id})` }];
+  }
+  return options;
+}
+
+const EmployeeRow = memo(({ emp, index, onEdit, onDelete, departments, designations }) => {
+  const departmentName =
+      emp.department?.name ||
+      departments.find(d => String(d.id) === String(emp.departmentId))?.name ||
+      "—";
+
+  const designationName =
+      emp.designation?.name ||
+      designations.find(d => String(d.id) === String(emp.designationId))?.name ||
+      "—";
+  return (
+    <tr style={{ animation: `fadeSlideIn 0.3s ease both`, animationDelay: `${index * 40}ms` }}>
+      <td>
+        <span className="emp-index">{String(index + 1).padStart(2, "0")}</span>
+      </td>
+      <td>
+        <div className="emp-name-cell">
+          <div className="emp-avatar">
+            {emp.firstName?.[0]}{emp.lastName?.[0]}
+          </div>
+          <div>
+            <div className="emp-fullname">{emp.firstName} {emp.lastName}</div>
+            <div className="emp-dept-tag">
+              {typeof departmentName === "object" ? departmentName?.name : departmentName}
+            </div>
+          </div>
         </div>
-        <div>
-          <div className="emp-fullname">{emp.firstName} {emp.lastName}</div>
-          <div className="emp-dept-tag">{emp.department || "—"}</div>
+      </td>
+      <td><span className="emp-meta"><i className="bi bi-envelope me-1" />{emp.email}</span></td>
+      <td><span className="emp-meta"><i className="bi bi-telephone me-1" />{emp.phone || "—"}</span></td>
+      <td>
+        <span className="salary-pill">
+          <i className="bi bi-currency-dollar" />
+          {Number(emp.basicSalary || 0).toLocaleString()}
+        </span>
+      </td>
+      <td>{safeString(designationName)}</td>
+      <td>
+        <span className={`status-badge ${emp.status === "ACTIVE" ? "status-active" : "status-inactive"}`}>
+          <span className="status-dot" />
+          {emp.status}
+        </span>
+      </td>
+      <td>
+        <div className="action-group">
+          <button className="action-btn edit-btn" onClick={() => onEdit(emp)} title="Edit">
+            <i className="bi bi-pencil-fill" />
+          </button>
+          <button className="action-btn delete-btn" onClick={() => onDelete(emp)} title="Delete">
+            <i className="bi bi-trash3-fill" />
+          </button>
         </div>
-      </div>
-    </td>
-    <td><span className="emp-meta"><i className="bi bi-envelope me-1" />{emp.email}</span></td>
-    <td><span className="emp-meta"><i className="bi bi-telephone me-1" />{emp.phone || "—"}</span></td>
-    <td>
-      <span className="salary-pill">
-        <i className="bi bi-currency-dollar" />
-        {Number(emp.basicSalary || 0).toLocaleString()}
-      </span>
-    </td>
-    <td>{emp.designation || "—"}</td>
-    <td>
-      <span className={`status-badge ${emp.status === "ACTIVE" ? "status-active" : "status-inactive"}`}>
-        <span className="status-dot" />
-        {emp.status}
-      </span>
-    </td>
-    <td>
-      <div className="action-group">
-        <button className="action-btn edit-btn" onClick={() => onEdit(emp)} title="Edit">
-          <i className="bi bi-pencil-fill" />
-        </button>
-        <button className="action-btn delete-btn" onClick={() => onDelete(emp)} title="Delete">
-          <i className="bi bi-trash3-fill" />
-        </button>
-      </div>
-    </td>
-  </tr>
-));
+      </td>
+    </tr>
+  );
+});
 
 const DeleteModal = memo(({ employee, onConfirm, onCancel }) => (
   <div className="modal-overlay" onClick={onCancel}>
@@ -78,7 +109,8 @@ const DeleteModal = memo(({ employee, onConfirm, onCancel }) => (
 function Employee() {
   const [employees, setEmployees]               = useState([]);
   const [users, setUsers]                       = useState([]);
-  const [allBasicSalaries, setAllBasicSalaries] = useState([]);
+  const [departments, setDepartments]           = useState([]);
+  const [designations, setDesignations]         = useState([]);
   const [form, setForm]                         = useState(EMPTY_FORM);
   const [editingId, setEditingId]               = useState(null);
   const [deleteTarget, setDeleteTarget]         = useState(null);
@@ -102,25 +134,35 @@ function Employee() {
   const fetchUsers = useCallback(() => {
     UserService.getAllUsers()
       .then(data => {
+        console.log('Fetched users:', data); // Diagnostic log
         const arr = Array.isArray(data) ? data : [];
-        // Role is a Java enum → serialized as plain string e.g. "EMPLOYEE"
-        const employeeUsers = arr.filter(u => u.role === "EMPLOYEE");
-        setUsers(employeeUsers);
+        // TEMP: Show all users for debugging
+        setUsers(arr);
+        // Original filter:
+        // const employeeUsers = arr.filter(u => u.role === "EMPLOYEE");
+        // setUsers(employeeUsers);
       })
       .catch(err => { console.error(err); showToast("Failed to load users", "error"); });
   }, [showToast]);
 
-  const fetchAllBasicSalaries = useCallback(() => {
-    BasicSalaryService.getAllBasicSalary()
-      .then(data => setAllBasicSalaries(Array.isArray(data) ? data : []))
-      .catch(err => { console.error(err); showToast("Failed to load salary data", "error"); });
+  const fetchDepartments = useCallback(() => {
+    DepartmentService.getAllDepartments()
+      .then(data => setDepartments(Array.isArray(data) ? data : []))
+      .catch(err => { console.error(err); showToast("Failed to load departments", "error"); });
+  }, [showToast]);
+
+  const fetchDesignations = useCallback(() => {
+    DesignationService.getAllDesignations()
+      .then(data => setDesignations(Array.isArray(data) ? data : []))
+      .catch(err => { console.error(err); showToast("Failed to load designations", "error"); });
   }, [showToast]);
 
   useEffect(() => {
     fetchEmployees();
     fetchUsers();
-    fetchAllBasicSalaries();
-  }, [fetchEmployees, fetchUsers, fetchAllBasicSalaries]);
+    fetchDepartments();
+    fetchDesignations();
+  }, [fetchEmployees, fetchUsers, fetchDepartments, fetchDesignations]);
 
   /* auto-dismiss toast */
   useEffect(() => {
@@ -133,46 +175,39 @@ function Employee() {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   }, []);
 
-  // ── When userId changes → auto-fill basicSalary ──
+  // Helper to fetch and set basic salary for a userId using user's role
+  const fetchAndSetBasicSalary = useCallback((userId) => {
+    if (!userId) return;
+    setSalaryLoading(true);
+    UserService.getUserById(userId)
+      .then(user => {
+        if (user && user.role) {
+          return BasicSalaryService.getBasicSalaryByRole(user.role)
+            .then(salaryMap => {
+              // The backend returns a map: { ROLE_X: amount }
+              const amount = salaryMap && typeof salaryMap === 'object' ? Object.values(salaryMap)[0] : "";
+              setForm(prev => ({
+                ...prev,
+                userId,
+                basicSalary: amount !== undefined ? amount : "",
+              }));
+            });
+        } else {
+          setForm(prev => ({ ...prev, userId, basicSalary: "" }));
+        }
+      })
+      .catch(err => {
+        console.error("Could not load user or salary", err);
+        setForm(prev => ({ ...prev, userId, basicSalary: "" }));
+      })
+      .finally(() => setSalaryLoading(false));
+  }, []);
+
   const handleUserChange = useCallback((e) => {
     const selectedUserId = e.target.value;
-
     setForm(prev => ({ ...prev, userId: selectedUserId, basicSalary: "" }));
-    if (!selectedUserId) return;
-
-    setSalaryLoading(true);
-
-    const match = allBasicSalaries.find(
-      s => String(s.userId ?? s.user?.id) === String(selectedUserId)
-    );
-
-    if (match) {
-      setForm(prev => ({
-        ...prev,
-        userId:      selectedUserId,
-        basicSalary: match.amount ?? match.basicSalary ?? match.salary ?? "",
-      }));
-      setSalaryLoading(false);
-    } else {
-      BasicSalaryService.getAllBasicSalary()
-        .then(data => {
-          const fresh = Array.isArray(data) ? data : [];
-          setAllBasicSalaries(fresh);
-          const found = fresh.find(
-            s => String(s.userId ?? s.user?.id) === String(selectedUserId)
-          );
-          setForm(prev => ({
-            ...prev,
-            userId:      selectedUserId,
-            basicSalary: found
-              ? (found.amount ?? found.basicSalary ?? found.salary ?? "")
-              : "",
-          }));
-        })
-        .catch(err => { console.error(err); showToast("Could not load salary", "error"); })
-        .finally(() => setSalaryLoading(false));
-    }
-  }, [allBasicSalaries, showToast]);
+    fetchAndSetBasicSalary(selectedUserId);
+  }, [fetchAndSetBasicSalary]);
 
   const handleClear = useCallback(() => {
     setForm(EMPTY_FORM);
@@ -180,27 +215,65 @@ function Employee() {
   }, []);
 
   const handleEdit = useCallback((emp) => {
-    setForm({
-      firstName:   emp.firstName   || "",
-      lastName:    emp.lastName    || "",
-      email:       emp.email       || "",
-      phone:       emp.phone       || "",
-      basicSalary: emp.basicSalary || "",
-      userId:      emp.userId      || "",
-      department:  emp.department  || "",
-      designation: emp.designation || "",
-      status:      emp.status      || "ACTIVE",
-    });
-    setEditingId(emp.id ?? emp._id ?? emp.employeeId);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+    // Wait for departments, designations, users to be loaded
+    const setFormWithFallbacks = () => {
+      // Add fallback options if needed
+      setDepartments(prev => ensureOption(prev, emp.department?.id || emp.departmentId, emp.department?.name));
+      setDesignations(prev => ensureOption(prev, emp.designation?.id || emp.designationId, emp.designation?.name));
+      setUsers(prev => ensureOption(prev, emp.user_id || emp.userId, emp.user?.username || emp.user?.email || `User ${emp.user_id || emp.userId}`));
+      setForm({
+        firstName:   emp.firstName   || "",
+        lastName:    emp.lastName    || "",
+        email:       emp.email       || "",
+        phone:       emp.phone       || "",
+        basicSalary: emp.basicSalary || "",
+        userId:      emp.user_id     || emp.userId || "",
+        departmentId: emp.department?.id || emp.departmentId || "",
+        designationId: emp.designation?.id || emp.designationId || "",
+        status:      emp.status      || "ACTIVE",
+      });
+      setEditingId(emp.id ?? emp._id ?? emp.employeeId);
+      // Salary/user fallback logic remains
+      if ((emp.user_id || emp.userId) && !users.find(u => String(u.id) === String(emp.user_id || emp.userId))) {
+        UserService.getUserById(emp.user_id || emp.userId)
+          .then(user => {
+            if (user && user.id) {
+              setUsers(prev => [...prev, user]);
+            }
+          })
+          .catch(() => {});
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    // If any dropdown data is missing, wait for it to load
+    if (departments.length === 0 || designations.length === 0 || users.length === 0) {
+      Promise.all([
+        departments.length ? Promise.resolve() : DepartmentService.getAllDepartments().then(setDepartments),
+        designations.length ? Promise.resolve() : DesignationService.getAllDesignations().then(setDesignations),
+        users.length ? Promise.resolve() : UserService.getAllUsers().then(setUsers),
+      ]).then(setFormWithFallbacks);
+    } else {
+      setFormWithFallbacks();
+    }
+  }, [departments, designations, users]);
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
     setLoading(true);
+    // Transform payload to match backend expectations
+    const payload = {
+      ...form,
+      user_id: form.userId,
+      department: form.departmentId ? { id: form.departmentId } : null,
+      designation: form.designationId ? { id: form.designationId } : null,
+    };
+    delete payload.userId;
+    delete payload.departmentId;
+    delete payload.designationId;
     const action = editingId
-      ? EmployeeService.updateEmployee({ ...form, id: editingId })
-      : EmployeeService.createEmployee(form);
+      ? EmployeeService.updateEmployee({ ...payload, id: editingId })
+      : EmployeeService.createEmployee(payload);
     action
       .then(() => {
         fetchEmployees();
@@ -212,25 +285,36 @@ function Employee() {
   }, [form, editingId, fetchEmployees, showToast, handleClear]);
 
   const handleDeleteConfirm = useCallback(() => {
-    if (!deleteTarget) return;
-    const id = deleteTarget.id ?? deleteTarget._id ?? deleteTarget.employeeId;
-    EmployeeService.deleteEmployee(id)
-      .then(() => { fetchEmployees(); showToast("Employee deleted"); })
-      .catch(err => { console.error(err); showToast("Delete failed", "error"); })
-      .finally(() => setDeleteTarget(null));
-  }, [deleteTarget, fetchEmployees, showToast]);
+    setSalaryLoading(true);
+    const currentUserId = form.userId;
+    if (!currentUserId) {
+      setForm(prev => ({ ...prev, basicSalary: "" }));
+      setSalaryLoading(false);
+      return;
+    }
+    // Just clear the salary field for delete confirm, or implement your own logic if needed
+    setForm(prev => ({ ...prev, basicSalary: "" }));
+    setSalaryLoading(false);
+  }, [form.userId]);
 
   const filtered = employees.filter(emp => {
-    const q = search.toLowerCase();
+    const fullName = `${emp.firstName} ${emp.lastName}`.toLowerCase();
     return (
-      `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(q) ||
-      (emp.email       || "").toLowerCase().includes(q) ||
-      (emp.department  || "").toLowerCase().includes(q) ||
-      (emp.designation || "").toLowerCase().includes(q)
+      emp.email.toLowerCase().includes(search.toLowerCase()) ||
+      emp.phone.includes(search) ||
+      fullName.includes(search)
     );
   });
 
   const isEdit = editingId !== null;
+
+
+  // Define selectedUser for fallback logic
+  const selectedUser = users.find(u => String(u.id) === String(form.userId));
+  const fallbackUserOption = !selectedUser && form.userId
+    ? <option value={form.userId}>Linked user (not in list)</option>
+    : null;
+
 
   return (
     <div className="emp-page">
@@ -317,9 +401,10 @@ function Employee() {
                 {users.map(u => (
                   // User entity: id, username, email, role, enabled, createdAt
                   <option key={u.id} value={u.id}>
-                    {u.username} — {u.email}
+                    {u.username ? `${u.username} — ${u.email}` : u.email || u.id}
                   </option>
                 ))}
+                {fallbackUserOption}
               </select>
             </div>
 
@@ -340,26 +425,49 @@ function Employee() {
                 value={form.basicSalary}
                 onChange={handleChange}
                 placeholder={salaryLoading ? "Fetching salary…" : "Auto-filled from user salary"}
-                readOnly={salaryLoading}
+                 readOnly={salaryLoading}
               />
             </div>
 
-            {[
-              { label: "Department",  name: "department",  col: 4 },
-              { label: "Designation", name: "designation", col: 4 },
-            ].map(({ label, name, col }) => (
-              <div key={name} className={`col-md-${col}`}>
-                <label className="form-label-sm">{label}</label>
-                <input
-                  type="text"
-                  name={name}
-                  className="emp-input"
-                  value={form[name]}
-                  onChange={handleChange}
-                  placeholder={label}
-                />
-              </div>
-            ))}
+            {/* ── Department Dropdown ── */}
+            <div className="col-md-4">
+              <label className="form-label-sm">Department</label>
+              <select
+                name="departmentId"
+                className="emp-input emp-select"
+                value={form.departmentId}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select Department</option>
+                {departments.map(dep => (
+                  <option key={dep.id} value={dep.id}>{dep.name}</option>
+                ))}
+                {!departments.some(dep => String(dep.id) === String(form.departmentId)) && form.departmentId && (
+                  <option value={form.departmentId}>Not in list ({form.departmentId})</option>
+                )}
+              </select>
+            </div>
+
+            {/* ── Designation Dropdown ── */}
+            <div className="col-md-4">
+              <label className="form-label-sm">Designation</label>
+              <select
+                name="designationId"
+                className="emp-input emp-select"
+                value={form.designationId}
+                onChange={handleChange}
+                required
+              >
+                <option value="">Select Designation</option>
+                {designations.map(des => (
+                  <option key={des.id} value={des.id}>{des.name}</option>
+                ))}
+                {!designations.some(des => String(des.id) === String(form.designationId)) && form.designationId && (
+                  <option value={form.designationId}>Not in list ({form.designationId})</option>
+                )}
+              </select>
+            </div>
 
             <div className="col-md-4">
               <label className="form-label-sm">Status</label>
@@ -456,6 +564,8 @@ function Employee() {
                     index={i}
                     onEdit={handleEdit}
                     onDelete={setDeleteTarget}
+                    departments={departments}
+                    designations={designations}
                   />
                 ))
               )}

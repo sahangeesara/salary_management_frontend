@@ -7,14 +7,20 @@ const NAV_SECTIONS = [
     label: "Main",
     items: [{ to: "/", icon: "bi-grid-1x2-fill", label: "Dashboard" }],
   },
-  {
-    label: "Workforce",
-    items: [
-      { to: "/employees", icon: "bi-people-fill", label: "Employees" },
-      { to: "/users", icon: "bi-person-badge-fill", label: "Users" },
-      { to: "/leave", icon: "bi-calendar2-x-fill", label: "Employee Leave" },
-    ],
-  },
+   {
+     label: "Workforce",
+     items: [
+       { to: "/employees", icon: "bi-people-fill", label: "Employees" },
+       { to: "/users", icon: "bi-person-badge-fill", label: "Users" },
+       { to: "/leave", icon: "bi-calendar2-x-fill", label: "Employee Leave" },
+       { to: "/department", icon: "bi-building", label: "Departments" },
+       {
+         to: "/designation",
+         icon: "bi-diagram-3-fill",
+         label: "Designations",
+       },
+     ],
+   },
   {
     label: "Payroll",
     items: [

@@ -47,6 +47,21 @@ class BasicSalaryService {
         });
       }
 
+      // Get basic salary by role
+      getBasicSalaryByRole(role) {
+        return fetch(`${API_URL}/get-by-role/${encodeURIComponent(role)}`)
+          .then(res => {
+            if (!res.ok) {
+              throw new Error(`Server error: ${res.status}`);
+            }
+            return res.json();
+          })
+          .catch(err => {
+            console.error("Fetch error (getBasicSalaryByRole):", err);
+            return {};
+          });
+      }
+
 }
 
 const basicSalaryService = new BasicSalaryService();

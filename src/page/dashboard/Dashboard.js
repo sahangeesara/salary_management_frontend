@@ -1,12 +1,20 @@
-import React, { useState, useEffect, memo } from "react"; // Removed unused useCallback
+import React, { useState, useEffect, memo } from "react";
 import EmployeeService from "../../service/EmployeeService";
 import BonusService from "../../service/BonusService";
 import PayrollService from "../../service/PayrollService";
 import AllowanceService from "../../service/AllowanceService";
 import DeductionService from "../../service/DeductionService";
-import OvertimeService from "../../service/OvertimeService ";
+import OvertimeService from "../../service/OvertimeService";
 import LeaveService from "../../service/EmployeeLeaveService";
 import "./dashboard.css";
+
+// Utility to safely render department/designation as string
+function getName(val) {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object" && val.name) return val.name;
+  return String(val);
+}
 
 /* ─── Mini sparkline bar chart ─── */
 const SparkBar = memo(({ values = [], color = "#4f8ef7" }) => {
@@ -151,7 +159,7 @@ export default function Dashboard() {
   /* ── Department breakdown ── */
   const deptMap = {};
   employees.forEach(e => {
-    const d = e.department || "Other";
+    const d = getName(e.department) || "Other";
     deptMap[d] = (deptMap[d] || 0) + 1;
   });
   const deptEntries = Object.entries(deptMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
@@ -256,14 +264,14 @@ export default function Dashboard() {
               <div className="empty-mini">No department data</div>
             ) : (
               deptEntries.map(([dept, count], i) => (
-                <HBar key={dept} label={dept} value={count} max={deptEntries[0][1]} color={deptColors[i % deptColors.length]} />
+                <HBar key={dept} label={getName(dept)} value={count} max={deptEntries[0][1]} color={deptColors[i % deptColors.length]} />
               ))
             )}
           </div>
           <div className="dept-donut-row">
             {deptEntries.map(([dept, count], i) => (
               <div key={dept} className="dept-pill" style={{ borderColor: deptColors[i % deptColors.length], color: deptColors[i % deptColors.length] }}>
-                {dept} <strong>{count}</strong>
+                {getName(dept.name)} <strong>{count}</strong>
               </div>
             ))}
           </div>
@@ -283,7 +291,7 @@ export default function Dashboard() {
                 </div>
                 <div className="emp-list-info">
                   <div className="emp-list-name">{emp.firstName} {emp.lastName}</div>
-                  <div className="emp-list-meta">{emp.designation || emp.department || "—"}</div>
+                  <div className="emp-list-meta">{getName(emp.designation) || getName(emp.department) || "—"}</div>
                 </div>
                 <div className="emp-list-right">
                   <div className="emp-list-salary">{fmtK(Number(emp.basicSalary || 0))}</div>

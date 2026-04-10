@@ -3,6 +3,14 @@ import BonusService from "../../service/BonusService";
 import EmployeeService from "../../service/EmployeeService";
 import "./bonus.css";
 
+// Utility to safely render department/designation as string
+function getName(val) {
+  if (!val) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "object" && val.name) return val.name;
+  return String(val);
+}
+
 // 1. Move static constants OUTSIDE the component so they are stable 
 // and don't need to be in dependency arrays.
 const EMPTY_FORM = { employeeId: "", amount: "" };
@@ -27,7 +35,7 @@ const BonusRow = memo(({ bonus, index, onEdit, onDelete, employees }) => {
           <div className="bonus-avatar">{initials.toUpperCase()}</div>
           <div>
             <div className="bonus-fullname">{empName}</div>
-            <div className="bonus-dept-tag">{emp?.department || ""}</div>
+            <div className="bonus-dept-tag">{getName(emp?.department)}</div>
           </div>
         </div>
       </td>
@@ -276,7 +284,7 @@ function Bonus() {
                   return (
                     <option key={id} value={id}>
                       {emp.firstName} {emp.lastName}
-                      {emp.department ? ` · ${emp.department}` : ""}
+                      {emp.department ? ` · ${getName(emp.department)}` : ""}
                     </option>
                   );
                 })}
@@ -292,7 +300,7 @@ function Bonus() {
                       {selectedEmp.firstName} {selectedEmp.lastName}
                     </div>
                     <div className="emp-chip-meta">
-                      {selectedEmp.designation || selectedEmp.department || ""}
+                      {getName(selectedEmp.designation) || getName(selectedEmp.department) || ""}
                     </div>
                   </div>
                 </div>

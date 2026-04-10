@@ -49,7 +49,7 @@ const EmployeeLeaveRow = memo(({ employeeLeave, index, onEdit, onDelete, employe
           <div className="employeeLeave-avatar">{initials.toUpperCase()}</div>
           <div>
             <div className="employeeLeave-fullname">{empName}</div>
-            <div className="employeeLeave-dept-tag">{emp?.department || "N/A"}</div>
+            <div className="employeeLeave-dept-tag">{emp?.department.name || "N/A"}</div>
           </div>
         </div>
       </td>
